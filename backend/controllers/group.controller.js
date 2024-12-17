@@ -214,22 +214,34 @@ export const updateGroup = async (req, res) => {
 export const deleteGroup = async (req, res) => {
   try {
     const { id } = req.params;
-
     const groups = await readTxtFileAsJson(GROUPS_FILE);
+    const students = await readTxtFileAsJson(STUDENTS_FILE);
+    const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
     const filteredGroups = groups.filter((g) => g.groupId !== id);
-
     if (groups.length === filteredGroups.length) {
       return res.status(404).send("Group not found.");
     }
-
+    const studentGroupEntries = studentGroups.filter((sg) => sg.groupId === id);
+    const studentIdsToDelete = studentGroupEntries.map((sg) => sg.studentId);
+    const filteredStudents = students.filter(
+      (student) => !studentIdsToDelete.includes(student.id)
+    );
+    const filteredStudentGroups = studentGroups.filter(
+      (sg) => sg.groupId !== id
+    );
     await saveJsonToTxtFile(GROUPS_FILE, filteredGroups);
+    await saveJsonToTxtFile(STUDENTS_FILE, filteredStudents);
+    await saveJsonToTxtFile(STUDENTS_GROUPS_FILE, filteredStudentGroups);
 
-    res.status(200).send("Group deleted successfully.");
+    res
+      .status(200)
+      .send(
+        `Group and associated students deleted successfully. Deleted ${studentIdsToDelete.length} students.`
+      );
   } catch (error) {
-    res.status(500).send("Error deleting group: " + error.message);
+    res.status(500).send("Error deleting group and students: " + error.message);
   }
 };
-
 export const getStudentsByGroup = async (req, res) => {
   try {
     const id = req.params.id;
