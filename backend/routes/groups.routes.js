@@ -8,20 +8,21 @@ import {
   assessGroup,
   getStudentsByGroup,
   getGroupLessons,
+  addGroupLesson,
 } from "../controllers/group.controller.js";
 
 const router = express.Router();
 
-// Group CRUD
-router.post("/", addGroup); // Create a new group
+router.post("/", addGroup);
 router.get("/", getAllGroups);
 router.get("/lessons", getGroupLessons);
-// Get all groups
-router.get("/:id", getGroupById); // Get group by ID
-router.put("/:id", updateGroup); // Update group by ID
-router.delete("/:id", deleteGroup); // Delete group by ID
+router.post("/lessons", addGroupLesson);
+
+router.get("/:id", getGroupById);
+router.put("/:id", updateGroup);
+router.delete("/:id", deleteGroup);
 router.get("/:id/students", getStudentsByGroup);
 
-router.post("/assess", assessGroup); // Assess group for a lesson
+router.post("/assess", assessGroup);
 
 export default router;

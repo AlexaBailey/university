@@ -12,3 +12,6 @@ export const GROUPS_FILE = "groups.txt";
 export const GROUPS_LESSONS_FILE = "group_lessons.txt";
 
 export const ASSESSMENTS_FILE = "assessments.txt";
+
+export const EXAMS_INFO_FILE = "exams_info.txt";
+export const EXAM_RESULTS_FILE = "exams_results.txt";

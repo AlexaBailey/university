@@ -1,6 +1,8 @@
 id,firstName,lastName,age
 1,Moris,Laney,20
-2,Bob,Smith,21
+2,Bob,Smith,40
 3,Charlie,Brown,22
 4,Diana,Evans,19
 5,Michelle,Goggins,21
+6,Nikita,Sokolovskiy,22
+7,Penelopa,Cruise,19

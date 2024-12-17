@@ -1,4 +1,5 @@
 import {
+  GROUPS_FILE,
   STUDENTS_FILE,
   STUDENTS_GRADES_FILE,
   STUDENTS_GROUPS_FILE,
@@ -48,17 +49,23 @@ export const addStudentGrade = async (req, res) => {
     res.status(500).send("Error adding grade: " + error.message);
   }
 };
-
 export const getAllStudents = async (req, res) => {
   try {
     const students = await readTxtFileAsJson(STUDENTS_FILE);
     const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
+    const groups = await readTxtFileAsJson(GROUPS_FILE);
 
     const studentsWithGroups = students.map((student) => {
-      const group = studentGroups.find((g) => g.studentId === student.id);
+      const studentGroup = studentGroups.find(
+        (g) => g.studentId === student.id
+      );
+      const groupData = studentGroup
+        ? groups.find((group) => group.groupId == studentGroup.groupId)
+        : null;
+
       return {
         ...student,
-        groupId: group ? group.groupId : null,
+        group: groupData || null,
       };
     });
 
@@ -68,34 +75,45 @@ export const getAllStudents = async (req, res) => {
   }
 };
 
-// Get a single student with group ID
 export const getStudentById = async (req, res) => {
   try {
     const students = await readTxtFileAsJson(STUDENTS_FILE);
     const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
+    const groups = await readTxtFileAsJson(GROUPS_FILE);
 
     const student = students.find((s) => s.id === req.params.id);
     if (!student) return res.status(404).send("Student not found");
 
-    const group = studentGroups.find((g) => g.studentId === student.id);
-    res.send({ ...student, groupId: group ? group.groupId : null });
+    const studentGroup = studentGroups.find((g) => g.studentId == student.id);
+    const groupData = studentGroup
+      ? groups.find((group) => group.groupId === studentGroup.groupId)
+      : null;
+
+    res.send({
+      ...student,
+      group: groupData || null,
+    });
   } catch (error) {
     res.status(500).send("Error retrieving student: " + error.message);
   }
 };
-
-// Add a new student and associate a group ID
 export const addStudent = async (req, res) => {
   try {
     const students = await readTxtFileAsJson(STUDENTS_FILE);
     const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
 
-    const newStudent = req.body;
-    const newId = students.length
-      ? parseInt(students[students.length - 1].id) + 1
-      : 1;
+    const validStudents = students.filter(
+      (student) => !isNaN(parseInt(student.id))
+    );
+    const maxId = validStudents.length
+      ? Math.max(...validStudents.map((student) => parseInt(student.id)))
+      : 0;
 
-    students.push({ id: newId, ...newStudent });
+    const newId = maxId + 1;
+    let { id, ...rest } = req.body;
+    const newStudent = { id: newId, ...rest };
+    students.push(newStudent);
+    console.log(newId);
     if (req.body.groupId) {
       studentGroups.push({
         recordId: studentGroups.length
@@ -106,6 +124,8 @@ export const addStudent = async (req, res) => {
       });
     }
 
+    console.log(students);
+
     await saveJsonToTxtFile(STUDENTS_FILE, students);
     await saveJsonToTxtFile(STUDENTS_GROUPS_FILE, studentGroups);
 
@@ -115,7 +135,6 @@ export const addStudent = async (req, res) => {
   }
 };
 
-// Update student and group association
 export const updateStudent = async (req, res) => {
   try {
     const students = await readTxtFileAsJson(STUDENTS_FILE);
@@ -151,7 +170,6 @@ export const updateStudent = async (req, res) => {
   }
 };
 
-// Delete a student and remove group association
 export const deleteStudent = async (req, res) => {
   try {
     const students = await readTxtFileAsJson(STUDENTS_FILE);

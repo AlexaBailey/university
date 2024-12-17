@@ -7,11 +7,9 @@ import {
 } from "../constants/filenames.js";
 import { readTxtFileAsJson, saveJsonToTxtFile } from "../utils/fileHandlers.js";
 
-// Belarusian Grading Scale (1-10)
-const gradingScale = () => {
-  return Math.floor(Math.random() * 10) + 1; // Random grade between 1 and 10
+export const gradingScale = () => {
+  return Math.floor(Math.random() * 10) + 1;
 };
-// Assess a group for a specific lesson using recordId
 
 export const assessGroup = async (req, res) => {
   try {
@@ -19,17 +17,14 @@ export const assessGroup = async (req, res) => {
 
     console.log(`RecordId received: ${recordId}`);
 
-    // Validate request
     if (!recordId) {
       return res.status(400).send("recordId is required.");
     }
 
-    // Load data
     const groupLessons = await readTxtFileAsJson(GROUPS_LESSONS_FILE);
     const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
     const assessments = await readTxtFileAsJson(ASSESSMENTS_FILE);
 
-    // Find the specific group lesson using recordId
     const groupLesson = groupLessons.find(
       (lesson) => parseInt(lesson.groupLessonId) === parseInt(recordId)
     );
@@ -41,7 +36,6 @@ export const assessGroup = async (req, res) => {
     const { groupId, groupLessonId } = groupLesson;
     console.log(`GroupId for lesson: ${groupId}`);
 
-    // Find all students in the specified group from student_groups.txt
     const groupStudents = studentGroups.filter(
       (entry) => parseInt(entry.groupId) === parseInt(groupId)
     );
@@ -50,17 +44,14 @@ export const assessGroup = async (req, res) => {
       return res.status(404).send("No students found in this group.");
     }
 
-    // Generate assessments for each student in the group
     const newAssessments = groupStudents.map((entry) => ({
       groupLessonId,
       studentId: entry.studentId,
-      mark: gradingScale(), // Assign a numeric grade between 1-10
+      mark: gradingScale(),
     }));
 
-    // Merge existing and new assessments
     const updatedAssessments = [...assessments, ...newAssessments];
 
-    // Save assessments back to file
     await saveJsonToTxtFile(ASSESSMENTS_FILE, updatedAssessments);
 
     res.status(200).send({
@@ -73,15 +64,13 @@ export const assessGroup = async (req, res) => {
   }
 };
 
-// Get group lessons filtered by groupId, teacherId, or date
 export const getGroupLessons = async (req, res) => {
   try {
     const { groupId, teacherId, date } = req.query;
-    console.log(req.query);
 
     const groupLessons = await readTxtFileAsJson(GROUPS_LESSONS_FILE);
+    const assessments = await readTxtFileAsJson(ASSESSMENTS_FILE);
 
-    // Filter lessons based on optional parameters
     const filteredLessons = groupLessons.filter((lesson) => {
       const matchesGroup = groupId ? lesson.groupId === groupId : true;
       const matchesTeacher = teacherId ? lesson.teacherId === teacherId : true;
@@ -90,19 +79,30 @@ export const getGroupLessons = async (req, res) => {
       return matchesGroup && matchesTeacher && matchesDate;
     });
 
-    if (filteredLessons.length === 0) {
+    const enrichedLessons = filteredLessons.map((lesson) => {
+      const alreadyAssessed = assessments.some(
+        (assessment) =>
+          parseInt(assessment.groupLessonId) === parseInt(lesson.groupLessonId)
+      );
+
+      return {
+        ...lesson,
+        assessed: alreadyAssessed,
+      };
+    });
+
+    if (enrichedLessons.length === 0) {
       return res
         .status(404)
         .send("No lessons found matching the specified filters.");
     }
 
-    res.status(200).send(filteredLessons);
+    res.status(200).send(enrichedLessons);
   } catch (error) {
     res.status(500).send("Error retrieving group lessons: " + error.message);
   }
 };
 
-// Add a new group lesson
 export const addGroupLesson = async (req, res) => {
   try {
     const { groupId, teacherId, subjectId, date, time } = req.body;
@@ -135,7 +135,6 @@ export const addGroupLesson = async (req, res) => {
   }
 };
 
-// Create a new group
 export const addGroup = async (req, res) => {
   try {
     const { groupName } = req.body;
@@ -162,7 +161,6 @@ export const addGroup = async (req, res) => {
   }
 };
 
-// Get all groups
 export const getAllGroups = async (req, res) => {
   try {
     const groups = await readTxtFileAsJson(GROUPS_FILE);
@@ -172,7 +170,6 @@ export const getAllGroups = async (req, res) => {
   }
 };
 
-// Get group by ID
 export const getGroupById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -190,7 +187,6 @@ export const getGroupById = async (req, res) => {
   }
 };
 
-// Update group by ID
 export const updateGroup = async (req, res) => {
   try {
     const { id } = req.params;
@@ -218,7 +214,6 @@ export const updateGroup = async (req, res) => {
   }
 };
 
-// Delete group by ID
 export const deleteGroup = async (req, res) => {
   try {
     const { id } = req.params;
@@ -238,7 +233,6 @@ export const deleteGroup = async (req, res) => {
   }
 };
 
-// Get all students by group ID
 export const getStudentsByGroup = async (req, res) => {
   try {
     const id = req.params.id;
@@ -247,16 +241,13 @@ export const getStudentsByGroup = async (req, res) => {
       return res.status(400).send("Group ID is required and must be a number.");
     }
 
-    // Read students and student-groups files
     const students = await readTxtFileAsJson(STUDENTS_FILE);
     const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
 
-    // Find all studentIds belonging to the specified groupId
     const studentIdsInGroup = studentGroups
       .filter((entry) => entry.groupId === id)
       .map((entry) => entry.studentId);
 
-    // Find all matching student details
     const studentsInGroup = students.filter((student) =>
       studentIdsInGroup.includes(student.id)
     );
