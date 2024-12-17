@@ -1,0 +1,8 @@
+recordId,studentId,subject_id,grade
+1,1,1,A
+2,1,2,B
+3,2,3,A
+4,2,4,B+
+5,3,1,C
+6,3,2,A-
+7,1,4,C

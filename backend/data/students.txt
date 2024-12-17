@@ -1,0 +1,6 @@
+id,firstName,lastName,group,age
+1,Moris,Laney,PO-8,20
+2,Bob,Smith,CS102,30
+3,Charlie,Brown,CS101,32
+4,William,Goggins,PO-9,21
+5,Michelle,Goggins,PO-8,21

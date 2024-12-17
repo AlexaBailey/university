@@ -1,0 +1,7 @@
+recordId,teacherId,day,time
+1,1,Monday,10:00-11:30
+2,1,Wednesday,13:00-14:30
+3,2,Tuesday,09:00-10:30
+4,2,Thursday,15:00-16:30
+5,1,Friday,14.00-15.20
+6,1,Friday,15.20-16.20

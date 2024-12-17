@@ -1,0 +1,4 @@
+id,firstName,lastName,age
+1,Nick,Laney,20
+2,Jane,Smith,38
+3,Semen,Sokolov,21
