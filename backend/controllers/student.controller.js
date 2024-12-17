@@ -113,7 +113,6 @@ export const addStudent = async (req, res) => {
     let { id, ...rest } = req.body;
     const newStudent = { id: newId, ...rest };
     students.push(newStudent);
-    console.log(newId);
     if (req.body.groupId) {
       studentGroups.push({
         recordId: studentGroups.length
@@ -123,8 +122,6 @@ export const addStudent = async (req, res) => {
         groupId: req.body.groupId,
       });
     }
-
-    console.log(students);
 
     await saveJsonToTxtFile(STUDENTS_FILE, students);
     await saveJsonToTxtFile(STUDENTS_GROUPS_FILE, studentGroups);

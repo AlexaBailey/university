@@ -150,7 +150,6 @@ const TeacherDetail = () => {
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    console.log(name, value);
 
     setFilters((prevFilters) => ({
       ...prevFilters,
@@ -181,7 +180,6 @@ const TeacherDetail = () => {
     resetSubjectModal();
   };
   const handleSaveExam = () => {
-    console.log(examData);
     if (examData.examId) {
       apiClient
         .put(`/exams/${examData.examId}`, examData)

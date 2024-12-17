@@ -15,8 +15,6 @@ export const assessGroup = async (req, res) => {
   try {
     const { recordId } = req.body;
 
-    console.log(`RecordId received: ${recordId}`);
-
     if (!recordId) {
       return res.status(400).send("recordId is required.");
     }
@@ -34,7 +32,6 @@ export const assessGroup = async (req, res) => {
     }
 
     const { groupId, groupLessonId } = groupLesson;
-    console.log(`GroupId for lesson: ${groupId}`);
 
     const groupStudents = studentGroups.filter(
       (entry) => parseInt(entry.groupId) === parseInt(groupId)

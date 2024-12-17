@@ -6,7 +6,6 @@ import TeacherDetail from "./pages/TeacherDetail";
 import Students from "./pages/Students";
 import Groups from "./pages/Groups";
 import GroupDetail from "./pages/GroupDetail";
-import AdminPage from "./pages/AdminPAge";
 
 function App() {
   return (
