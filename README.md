@@ -9,7 +9,7 @@
 ```
 ## Installation
 
-Запуск клиента
+**Запуск клиента**
 ```bash
   cd client
 ```
@@ -21,7 +21,7 @@
 ```bash
   npm run dev
 ```
-Запуск сервера
+**Запуск сервера**
 ```bash
   cd backend
 ```
