@@ -2,7 +2,7 @@
 ## API Reference
 Убедись, что установлен Nodejs
 
-```http
+```bash
   server port =http://localhost:5000
   client port =http://localhost:5173
 
