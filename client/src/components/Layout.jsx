@@ -5,7 +5,7 @@ const Layout = ({ children }) => {
     <div className="flex min-h-screen bg-gray-light text-black-primary">
       <nav className="w-64 bg-black-primary text-white-primary p-6">
         <h2 className="text-xl font-bold mb-6 text-yellow-primary">
-          Dashboard
+          Allen University
         </h2>
         <ul className="space-y-4">
           <li>
@@ -26,6 +26,11 @@ const Layout = ({ children }) => {
           <li>
             <Link to="/groups" className="hover:text-yellow-primary">
               Groups
+            </Link>
+          </li>
+          <li>
+            <Link to="/subjects" className="hover:text-yellow-primary">
+              Subjects
             </Link>
           </li>
         </ul>

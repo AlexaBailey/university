@@ -8,6 +8,7 @@ import Groups from "./pages/Groups";
 import GroupDetail from "./pages/GroupDetail";
 import AssessmentDetails from "./pages/AssessmentDetails";
 import StudentGrades from "./pages/StudentGrades";
+import SubjectsPage from "./pages/SubjectsPage";
 
 function App() {
   return (
@@ -21,7 +22,10 @@ function App() {
           <Route path="/students/:id/grades" element={<StudentGrades />} />
 
           <Route path="/groups" element={<Groups />} />
+
           <Route path="/groups/:id" element={<GroupDetail />} />
+          <Route path="/subjects" element={<SubjectsPage />} />
+
           <Route
             path="/assessments/:groupLessonId"
             element={<AssessmentDetails />}

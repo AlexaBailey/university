@@ -228,7 +228,7 @@ const AdminPage = () => {
           <button
             key={tab}
             className={`px-4 py-2 rounded ${
-              activeTab === tab ? "bg-blue-500 text-white" : "bg-gray-300"
+              activeTab === tab ? "bg-yellow-600 text-white" : "bg-gray-300"
             }`}
             onClick={() => setActiveTab(tab)}
           >

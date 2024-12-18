@@ -5,7 +5,6 @@ import {
   GROUPS_FILE,
   GROUPS_LESSONS_FILE,
   STUDENTS_FILE,
-  STUDENTS_GRADES_FILE,
   STUDENTS_GROUPS_FILE,
   SUBJECTS_FILE,
 } from "../constants/filenames.js";
