@@ -9,6 +9,7 @@ import {
   getStudentsByGroup,
   getGroupLessons,
   addGroupLesson,
+  getAssessmentDetails,
 } from "../controllers/group.controller.js";
 
 const router = express.Router();
@@ -24,5 +25,6 @@ router.delete("/:id", deleteGroup);
 router.get("/:id/students", getStudentsByGroup);
 
 router.post("/assess", assessGroup);
+router.get("/assessments/:groupLessonId", getAssessmentDetails);
 
 export default router;

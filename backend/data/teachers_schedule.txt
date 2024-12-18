@@ -1,5 +1,6 @@
 recordId,teacherId,day,time,subjectId
-1,1,Monday,10:00-11:30,4
-2,1,Wednesday,13:00-14:30,2
-5,1,Friday,14:00-15:40,2
-6,2,Monday,14.00-15.20,1
+1,1,Monday,08:30-09:50,2
+2,1,Monday,10:10-11:40,3
+3,1,Tuesday,13:30-14:50,2
+4,2,Wednesday,16:20-17:50,4
+5,3,Friday,08:30-09:50,1

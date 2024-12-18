@@ -110,6 +110,7 @@ const TeacherDetail = () => {
     apiClient
       .post(`/groups/assess`, { recordId: selectedLesson })
       .then((res) => {
+        fetchGroupLessons();
         setAssessmentMessage(res.data.message);
         fetchTeacherData();
         resetAssessModal();
@@ -130,6 +131,7 @@ const TeacherDetail = () => {
   };
   const handleAddLesson = () => {
     apiClient.post(`/groups/lessons`, { ...lessonData, teacherId }).then(() => {
+      fetchGroupLessons();
       fetchTeacherData();
       resetAddLessonModal();
     });
@@ -137,6 +139,7 @@ const TeacherDetail = () => {
 
   const handleAddExam = () => {
     apiClient.post(`/exams`, { ...examData, teacherId }).then(() => {
+      fetchExams();
       fetchTeacherData();
       resetAddExamModal();
     });
@@ -291,7 +294,7 @@ const TeacherDetail = () => {
         <div className="flex justify-between mb-4">
           <h2 className="text-2xl font-semibold">Subjects</h2>
           <button
-            className="px-4 py-2 bg-yellow-500 rounded"
+            className="px-4 py-2 bg-black-primary text-yellow-500  rounded"
             onClick={() => setIsSubjectModalOpen(true)}
           >
             Add Subject
@@ -312,7 +315,7 @@ const TeacherDetail = () => {
                 <td className="border px-4 py-2">{subject.subject_name}</td>
                 <td className="border px-4 py-2 space-x-2">
                   <button
-                    className="px-2 py-1 bg-blue-500 text-white rounded"
+                    className="px-2 py-1 bg-yellow-600 text-white rounded"
                     onClick={() => {
                       setSubjectData(subject);
                       setEditSubjectRecordId(subject.recordId);
@@ -338,7 +341,7 @@ const TeacherDetail = () => {
         <div className="flex justify-between mb-4">
           <h2 className="text-2xl font-semibold">Schedule</h2>
           <button
-            className="px-4 py-2 bg-yellow-500 rounded"
+            className="px-4 py-2 bg-black-primary text-yellow-500  rounded"
             onClick={() => setIsScheduleModalOpen(true)}
           >
             Add Schedule
@@ -361,7 +364,7 @@ const TeacherDetail = () => {
                 <td className="border px-4 py-2">{lesson.subjectId}</td>
                 <td className="border px-4 py-2 space-x-2">
                   <button
-                    className="px-2 py-1 bg-blue-500 text-white rounded"
+                    className="px-2 py-1 bg-yellow-600 text-white rounded"
                     onClick={() => {
                       setScheduleData(lesson);
                       setEditScheduleRecordId(lesson.recordId);
@@ -379,207 +382,6 @@ const TeacherDetail = () => {
                 </td>
               </tr>
             ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="mt-6 flex justify-between ">
-        <div className="mb-4 flex space-x-4">
-          <div>
-            <label className="block font-semibold">Filter by Group</label>
-            <select
-              name="groupId"
-              value={filters.groupId}
-              onChange={handleFilterChange}
-              className="border px-2 py-1 w-full"
-            >
-              <option value="">All Groups</option>
-              {allGroups.map((group) => (
-                <option key={group.groupId} value={group.groupId}>
-                  {group.groupName}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block font-semibold">Filter by Date</label>
-            <input
-              type="date"
-              name="date"
-              value={filters.date}
-              onChange={handleFilterChange}
-              className="border px-2 py-1 w-full"
-            />
-          </div>
-        </div>
-        <div>
-          <button
-            className="px-4 py-2 bg-yellow-500 text-white rounded"
-            onClick={() => setIsAddExamModalOpen(true)}
-          >
-            Add Exam
-          </button>
-        </div>
-      </div>
-
-      <Modal
-        isOpen={isAddLessonModalOpen}
-        closeModal={resetAddLessonModal}
-        title="Add Group Lesson"
-        onSubmit={handleAddLesson}
-      >
-        <select
-          value={lessonData.groupId}
-          onChange={(e) =>
-            setLessonData({ ...lessonData, groupId: e.target.value })
-          }
-          className="border px-2 py-1 mb-2 w-full"
-        >
-          <option value="">Select Group</option>
-          {allGroups.map((group) => (
-            <option key={group.groupId} value={group.groupId}>
-              {group.groupName}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={lessonData.subjectId}
-          onChange={(e) =>
-            setLessonData({ ...lessonData, subjectId: e.target.value })
-          }
-          className="border px-2 py-1 mb-2 w-full"
-        >
-          <option value="">Select Subject</option>
-          {subjects.map((subject) => (
-            <option key={subject.subject_id} value={subject.subject_id}>
-              {subject.subject_name}
-            </option>
-          ))}
-        </select>
-
-        <input
-          type="date"
-          value={lessonData.date}
-          onChange={(e) =>
-            setLessonData({ ...lessonData, date: e.target.value })
-          }
-          className="border px-2 py-1 mb-2 w-full"
-        />
-
-        <input
-          type="time"
-          value={lessonData.time}
-          onChange={(e) =>
-            setLessonData({ ...lessonData, time: e.target.value })
-          }
-          className="border px-2 py-1 mb-2 w-full"
-        />
-      </Modal>
-
-      <Modal
-        isOpen={isAddExamModalOpen}
-        closeModal={resetAddExamModal}
-        title="Add Exam"
-        onSubmit={handleAddExam}
-      >
-        <select
-          value={examData.groupId}
-          onChange={(e) =>
-            setExamData({ ...examData, groupId: e.target.value })
-          }
-          className="border px-2 py-1 mb-2 w-full"
-        >
-          <option value="">Select Group</option>
-          {allGroups.map((group) => (
-            <option key={group.groupId} value={group.groupId}>
-              {group.groupName}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={examData.subjectId}
-          onChange={(e) =>
-            setExamData({ ...examData, subjectId: e.target.value })
-          }
-          className="border px-2 py-1 mb-2 w-full"
-        >
-          <option value="">Select Subject</option>
-          {subjects.map((subject) => (
-            <option key={subject.subject_id} value={subject.subject_id}>
-              {subject.subject_name}
-            </option>
-          ))}
-        </select>
-
-        <input
-          type="date"
-          value={examData.date}
-          onChange={(e) => setExamData({ ...examData, date: e.target.value })}
-          className="border px-2 py-1 mb-2 w-full"
-        />
-
-        <input
-          type="time"
-          value={examData.time}
-          onChange={(e) => setExamData({ ...examData, time: e.target.value })}
-          className="border px-2 py-1 mb-2 w-full"
-        />
-      </Modal>
-
-      <div>
-        <h2 className="text-2xl font-semibold mb-4">Exams</h2>
-        <table className="table-auto w-full border border-gray-300">
-          <thead>
-            <tr className="bg-yellow-500 text-black">
-              <th className="border px-4 py-2">Group</th>
-              <th className="border px-4 py-2">Subject</th>
-              <th className="border px-4 py-2">Date</th>
-              <th className="border px-4 py-2">Time</th>
-              <th className="border px-4 py-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {exams.length > 0 ? (
-              exams.map((exam) => (
-                <tr key={exam.examId}>
-                  <td className="border px-4 py-2">{exam.group.groupName}</td>
-                  <td className="border px-4 py-2">
-                    {exam.subject.subject_name}
-                  </td>
-                  <td className="border px-4 py-2">{exam.date}</td>
-                  <td className="border px-4 py-2">{exam.time}</td>
-                  <td className="border px-4 py-2 space-x-2">
-                    <button
-                      className="px-2 py-1 bg-blue-500 text-white rounded"
-                      onClick={() => {
-                        setExamData(exam);
-                        setIsExamModalOpen(true);
-                      }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="px-2 py-1 bg-red-500 text-white rounded"
-                      onClick={() =>
-                        apiClient
-                          .delete(`/exams/${exam.examId}`)
-                          .then(fetchExams)
-                      }
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="5" className="border px-4 py-2 text-center">
-                  No exams found.
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
@@ -667,6 +469,206 @@ const TeacherDetail = () => {
           <p className="text-green-500 text-sm">{assessmentMessage}</p>
         )}
       </Modal>
+      <div className="mt-6 flex justify-between ">
+        <div className="mb-4 flex space-x-4">
+          <div>
+            <label className="block font-semibold">Filter by Group</label>
+            <select
+              name="groupId"
+              value={filters.groupId}
+              onChange={handleFilterChange}
+              className="border px-2 py-1 w-full"
+            >
+              <option value="">All Groups</option>
+              {allGroups.map((group) => (
+                <option key={group.groupId} value={group.groupId}>
+                  {group.groupName}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block font-semibold">Filter by Date</label>
+            <input
+              type="date"
+              name="date"
+              value={filters.date}
+              onChange={handleFilterChange}
+              className="border px-2 py-1 w-full"
+            />
+          </div>
+        </div>
+        <div>
+          <button
+            className="px-4 py-2 bg-black-primary text-yellow-500  rounded"
+            onClick={() => setIsAddExamModalOpen(true)}
+          >
+            Add Exam
+          </button>
+        </div>
+      </div>
+
+      <Modal
+        isOpen={isAddLessonModalOpen}
+        closeModal={resetAddLessonModal}
+        title="Add Group Lesson"
+        onSubmit={handleAddLesson}
+      >
+        <select
+          value={lessonData.groupId}
+          onChange={(e) =>
+            setLessonData({ ...lessonData, groupId: e.target.value })
+          }
+          className="border px-2 py-1 mb-2 w-full"
+        >
+          <option value="">Select Group</option>
+          {allGroups.map((group) => (
+            <option key={group.groupId} value={group.groupId}>
+              {group.groupName}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={lessonData.subjectId}
+          onChange={(e) =>
+            setLessonData({ ...lessonData, subjectId: e.target.value })
+          }
+          className="border px-2 py-1 mb-2 w-full"
+        >
+          <option value="">Select Subject</option>
+          {subjects.map((subject) => (
+            <option key={subject.subject_id} value={subject.subject_id}>
+              {subject.subject_name}
+            </option>
+          ))}
+        </select>
+
+        <input
+          type="date"
+          value={lessonData.date}
+          onChange={(e) =>
+            setLessonData({ ...lessonData, date: e.target.value })
+          }
+          className="border px-2 py-1 mb-2 w-full"
+        />
+
+        <input
+          type="text"
+          value={lessonData.time}
+          onChange={(e) =>
+            setLessonData({ ...lessonData, time: e.target.value })
+          }
+          className="border px-2 py-1 mb-2 w-full"
+        />
+      </Modal>
+
+      <Modal
+        isOpen={isAddExamModalOpen}
+        closeModal={resetAddExamModal}
+        title="Add Exam"
+        onSubmit={handleAddExam}
+      >
+        <select
+          value={examData.groupId}
+          onChange={(e) =>
+            setExamData({ ...examData, groupId: e.target.value })
+          }
+          className="border px-2 py-1 mb-2 w-full"
+        >
+          <option value="">Select Group</option>
+          {allGroups.map((group) => (
+            <option key={group.groupId} value={group.groupId}>
+              {group.groupName}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={examData.subjectId}
+          onChange={(e) =>
+            setExamData({ ...examData, subjectId: e.target.value })
+          }
+          className="border px-2 py-1 mb-2 w-full"
+        >
+          <option value="">Select Subject</option>
+          {subjects.map((subject) => (
+            <option key={subject.subject_id} value={subject.subject_id}>
+              {subject.subject_name}
+            </option>
+          ))}
+        </select>
+
+        <input
+          type="date"
+          value={examData.date}
+          onChange={(e) => setExamData({ ...examData, date: e.target.value })}
+          className="border px-2 py-1 mb-2 w-full"
+        />
+
+        <input
+          type="time"
+          value={examData.time}
+          onChange={(e) => setExamData({ ...examData, time: e.target.value })}
+          className="border px-2 py-1 mb-2 w-full"
+        />
+      </Modal>
+
+      <div>
+        <h2 className="text-2xl font-semibold mb-4">Exams</h2>
+        <table className="table-auto w-full border border-gray-300">
+          <thead>
+            <tr className="bg-yellow-500 text-black">
+              <th className="border px-4 py-2">Group</th>
+              <th className="border px-4 py-2">Subject</th>
+              <th className="border px-4 py-2">Date</th>
+              <th className="border px-4 py-2">Time</th>
+              <th className="border px-4 py-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {exams.length > 0 ? (
+              exams.map((exam) => (
+                <tr key={exam.examId}>
+                  <td className="border px-4 py-2">{exam.group.groupName}</td>
+                  <td className="border px-4 py-2">
+                    {exam.subject.subject_name}
+                  </td>
+                  <td className="border px-4 py-2">{exam.date}</td>
+                  <td className="border px-4 py-2">{exam.time}</td>
+                  <td className="border px-4 py-2 space-x-2">
+                    <button
+                      className="px-2 py-1 bg-yellow-600 text-white rounded"
+                      onClick={() => {
+                        setExamData(exam);
+                        setIsExamModalOpen(true);
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="px-2 py-1 bg-red-500 text-white rounded"
+                      onClick={() =>
+                        apiClient
+                          .delete(`/exams/${exam.examId}`)
+                          .then(fetchExams)
+                      }
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="5" className="border px-4 py-2 text-center">
+                  No exams found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <Modal
         isOpen={isTeacherModalOpen}
@@ -800,7 +802,7 @@ const TeacherDetail = () => {
           className="border px-2 py-1 mb-2 w-full"
         >
           <option value="">Select Subject</option>
-          {allSubjects.map((subject) => (
+          {subjects.map((subject) => (
             <option key={subject.subject_id} value={subject.subject_id}>
               {subject.subject_name}
             </option>

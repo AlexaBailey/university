@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import apiClient from "../api/apiClient";
 
 const GroupDetail = () => {
   const { id: groupId } = useParams();
+  const navigate = useNavigate();
 
   const [group, setGroup] = useState({});
   const [students, setStudents] = useState([]);
@@ -118,7 +119,13 @@ const GroupDetail = () => {
             </thead>
             <tbody>
               {assessments.map((lesson) => (
-                <tr key={lesson.groupLessonId}>
+                <tr
+                  className="cursor-pointer hover:bg-yellow-500"
+                  onClick={() =>
+                    navigate(`/assessments/${lesson.groupLessonId}`)
+                  }
+                  key={lesson.groupLessonId}
+                >
                   <td className="border px-4 py-2">{lesson.groupLessonId}</td>
                   <td className="border px-4 py-2">{lesson.subjectId}</td>
                   <td className="border px-4 py-2">{lesson.date}</td>

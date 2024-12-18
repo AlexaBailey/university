@@ -6,17 +6,15 @@ import {
   STUDENTS_GROUPS_FILE,
 } from "../constants/filenames.js";
 import { readTxtFileAsJson, saveJsonToTxtFile } from "../utils/fileHandlers.js";
-
-export const gradingScale = () => {
-  return Math.floor(Math.random() * 10) + 1;
-};
+import { gradingScale } from "../utils/gradingScale.js";
+import { HTTP_STATUS } from "../constants/http.js";
 
 export const assessGroup = async (req, res) => {
   try {
     const { recordId } = req.body;
 
     if (!recordId) {
-      return res.status(400).send("recordId is required.");
+      return res.status(HTTP_STATUS.BAD_REQUEST).send("recordId is required.");
     }
 
     const groupLessons = await readTxtFileAsJson(GROUPS_LESSONS_FILE);
@@ -28,7 +26,9 @@ export const assessGroup = async (req, res) => {
     );
 
     if (!groupLesson) {
-      return res.status(404).send("No lesson found for the given recordId.");
+      return res
+        .status(HTTP_STATUS.NOT_FOUND)
+        .send("No lesson found for the given recordId.");
     }
 
     const { groupId, groupLessonId } = groupLesson;
@@ -38,7 +38,9 @@ export const assessGroup = async (req, res) => {
     );
 
     if (!groupStudents.length) {
-      return res.status(404).send("No students found in this group.");
+      return res
+        .status(HTTP_STATUS.NOT_FOUND)
+        .send("No students found in this group.");
     }
 
     const newAssessments = groupStudents.map((entry) => ({
@@ -51,13 +53,53 @@ export const assessGroup = async (req, res) => {
 
     await saveJsonToTxtFile(ASSESSMENTS_FILE, updatedAssessments);
 
-    res.status(200).send({
+    res.status(HTTP_STATUS.OK).send({
       message: "Group successfully assessed.",
       assessments: newAssessments,
     });
   } catch (error) {
     console.error("Error:", error.message);
-    res.status(500).send("Error assessing group: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error assessing group: " + error.message);
+  }
+};
+
+export const getAssessmentDetails = async (req, res) => {
+  try {
+    const { groupLessonId } = req.params;
+    const assessments = await readTxtFileAsJson(ASSESSMENTS_FILE);
+    const students = await readTxtFileAsJson(STUDENTS_FILE);
+
+    const relevantAssessments = assessments.filter(
+      (a) => parseInt(a.groupLessonId) === parseInt(groupLessonId)
+    );
+
+    if (relevantAssessments.length === 0) {
+      return res
+        .status(HTTP_STATUS.NOT_FOUND)
+        .send("No assessments found for this lesson.");
+    }
+
+    const detailedAssessments = relevantAssessments.map((a) => {
+      const student = students.find(
+        (s) => parseInt(s.id) === parseInt(a.studentId)
+      );
+      return {
+        groupLessonId: a.groupLessonId,
+        studentId: a.studentId,
+        studentName: student
+          ? `${student.firstName} ${student.lastName}`
+          : "Unknown",
+        mark: a.mark,
+      };
+    });
+
+    res.status(HTTP_STATUS.OK).send(detailedAssessments);
+  } catch (error) {
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error retrieving assessment details: " + error.message);
   }
 };
 
@@ -90,13 +132,15 @@ export const getGroupLessons = async (req, res) => {
 
     if (enrichedLessons.length === 0) {
       return res
-        .status(404)
+        .status(HTTP_STATUS.NOT_FOUND)
         .send("No lessons found matching the specified filters.");
     }
 
-    res.status(200).send(enrichedLessons);
+    res.status(HTTP_STATUS.OK).send(enrichedLessons);
   } catch (error) {
-    res.status(500).send("Error retrieving group lessons: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error retrieving group lessons: " + error.message);
   }
 };
 
@@ -105,14 +149,16 @@ export const addGroupLesson = async (req, res) => {
     const { groupId, teacherId, subjectId, date, time } = req.body;
 
     if (!groupId || !teacherId || !subjectId || !date || !time) {
-      return res.status(400).send("All fields are required.");
+      return res
+        .status(HTTP_STATUS.BAD_REQUEST)
+        .send("All fields are required.");
     }
 
     const groupLessons = await readTxtFileAsJson(GROUPS_LESSONS_FILE);
 
     const newLesson = {
       groupLessonId: groupLessons.length
-        ? groupLessons[groupLessons.length - 1].groupLessonId + 1
+        ? parseInt(groupLessons[groupLessons.length - 1].groupLessonId) + 1
         : 1,
       groupId,
       teacherId,
@@ -125,10 +171,12 @@ export const addGroupLesson = async (req, res) => {
     await saveJsonToTxtFile(GROUPS_LESSONS_FILE, groupLessons);
 
     res
-      .status(201)
+      .status(HTTP_STATUS.CREATED)
       .send({ message: "Group lesson added successfully.", newLesson });
   } catch (error) {
-    res.status(500).send("Error adding group lesson: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error adding group lesson: " + error.message);
   }
 };
 
@@ -137,7 +185,9 @@ export const addGroup = async (req, res) => {
     const { groupName } = req.body;
 
     if (!groupName) {
-      return res.status(400).send("Group name is required.");
+      return res
+        .status(HTTP_STATUS.BAD_REQUEST)
+        .send("Group name is required.");
     }
 
     const groups = await readTxtFileAsJson(GROUPS_FILE);
@@ -152,18 +202,24 @@ export const addGroup = async (req, res) => {
     groups.push(newGroup);
     await saveJsonToTxtFile(GROUPS_FILE, groups);
 
-    res.status(201).send({ message: "Group added successfully.", newGroup });
+    res
+      .status(HTTP_STATUS.CREATED)
+      .send({ message: "Group added successfully.", newGroup });
   } catch (error) {
-    res.status(500).send("Error adding group: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error adding group: " + error.message);
   }
 };
 
 export const getAllGroups = async (req, res) => {
   try {
     const groups = await readTxtFileAsJson(GROUPS_FILE);
-    res.status(200).send(groups);
+    res.status(HTTP_STATUS.OK).send(groups);
   } catch (error) {
-    res.status(500).send("Error retrieving groups: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error retrieving groups: " + error.message);
   }
 };
 
@@ -175,12 +231,14 @@ export const getGroupById = async (req, res) => {
     const group = groups.find((g) => g.groupId === id);
 
     if (!group) {
-      return res.status(404).send("Group not found.");
+      return res.status(HTTP_STATUS.NOT_FOUND).send("Group not found.");
     }
 
-    res.status(200).send(group);
+    res.status(HTTP_STATUS.OK).send(group);
   } catch (error) {
-    res.status(500).send("Error retrieving group: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error retrieving group: " + error.message);
   }
 };
 
@@ -193,7 +251,7 @@ export const updateGroup = async (req, res) => {
     const index = groups.findIndex((g) => g.groupId === id);
 
     if (index === -1) {
-      return res.status(404).send("Group not found.");
+      return res.status(HTTP_STATUS.NOT_FOUND).send("Group not found.");
     }
 
     groups[index] = {
@@ -204,10 +262,12 @@ export const updateGroup = async (req, res) => {
     await saveJsonToTxtFile(GROUPS_FILE, groups);
 
     res
-      .status(200)
+      .status(HTTP_STATUS.OK)
       .send({ message: "Group updated successfully.", group: groups[index] });
   } catch (error) {
-    res.status(500).send("Error updating group: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error updating group: " + error.message);
   }
 };
 
@@ -219,7 +279,7 @@ export const deleteGroup = async (req, res) => {
     const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
     const filteredGroups = groups.filter((g) => g.groupId !== id);
     if (groups.length === filteredGroups.length) {
-      return res.status(404).send("Group not found.");
+      return res.status(HTTP_STATUS.NOT_FOUND).send("Group not found.");
     }
     const studentGroupEntries = studentGroups.filter((sg) => sg.groupId === id);
     const studentIdsToDelete = studentGroupEntries.map((sg) => sg.studentId);
@@ -234,12 +294,14 @@ export const deleteGroup = async (req, res) => {
     await saveJsonToTxtFile(STUDENTS_GROUPS_FILE, filteredStudentGroups);
 
     res
-      .status(200)
+      .status(HTTP_STATUS.OK)
       .send(
         `Group and associated students deleted successfully. Deleted ${studentIdsToDelete.length} students.`
       );
   } catch (error) {
-    res.status(500).send("Error deleting group and students: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error deleting group and students: " + error.message);
   }
 };
 export const getStudentsByGroup = async (req, res) => {
@@ -247,7 +309,9 @@ export const getStudentsByGroup = async (req, res) => {
     const id = req.params.id;
 
     if (!id) {
-      return res.status(400).send("Group ID is required and must be a number.");
+      return res
+        .status(HTTP_STATUS.BAD_REQUEST)
+        .send("Group ID is required and must be a number.");
     }
 
     const students = await readTxtFileAsJson(STUDENTS_FILE);
@@ -262,13 +326,15 @@ export const getStudentsByGroup = async (req, res) => {
     );
 
     if (studentsInGroup.length === 0) {
-      return res.status(404).send("No students found for this group.");
+      return res
+        .status(HTTP_STATUS.NOT_FOUND)
+        .send("No students found for this group.");
     }
 
-    res.status(200).send(studentsInGroup);
+    res.status(HTTP_STATUS.OK).send(studentsInGroup);
   } catch (error) {
     res
-      .status(500)
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error retrieving students by group: " + error.message);
   }
 };

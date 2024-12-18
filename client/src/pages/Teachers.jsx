@@ -57,10 +57,10 @@ const Teachers = () => {
               <td className="border px-4 py-2 text-center">
                 {teacher.firstName} {teacher.lastName}
               </td>
-              <td className="border px-4 py-2 text-center space-x-2">
+              <td className="border px-4 py-2 text-center space-x-5">
                 <Link
                   to={`/teachers/${teacher.id}`}
-                  className="text-black-primary hover:text-yellow-600"
+                  className="text-yellow-100 bg-yellow-500 px-4 py-2 rounded hover:bg-yellow-600"
                 >
                   View Details
                 </Link>

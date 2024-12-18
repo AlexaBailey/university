@@ -5,6 +5,7 @@ import {
   SUBJECTS_FILE,
 } from "../constants/filenames.js";
 import { readTxtFileAsJson, saveJsonToTxtFile } from "../utils/fileHandlers.js";
+import { HTTP_STATUS } from "../constants/http.js";
 
 export const getAllTeachers = async (req, res) => {
   try {
@@ -12,7 +13,9 @@ export const getAllTeachers = async (req, res) => {
     res.send(teachers);
   } catch (error) {
     console.log(error);
-    res.status(500).send("Error reading teachers data: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error reading teachers data: " + error.message);
   }
 };
 
@@ -20,10 +23,13 @@ export const getTeacherById = async (req, res) => {
   try {
     const teachers = await readTxtFileAsJson(TEACHERS_FILE);
     const teacher = teachers.find((t) => t.id === req.params.id);
-    if (!teacher) return res.status(404).send("Teacher not found");
+    if (!teacher)
+      return res.status(HTTP_STATUS.NOT_FOUND).send("Teacher not found");
     res.send(teacher);
   } catch (error) {
-    res.status(500).send("Error retrieving teacher: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error retrieving teacher: " + error.message);
   }
 };
 
@@ -46,7 +52,9 @@ export const getTeacherSubjects = async (req, res) => {
 
     res.send(result);
   } catch (error) {
-    res.status(500).send("Error retrieving teacher subjects: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error retrieving teacher subjects: " + error.message);
   }
 };
 
@@ -62,9 +70,11 @@ export const addTeacherSubject = async (req, res) => {
     };
     subjects.push(newSubject);
     await saveJsonToTxtFile(TEACHERS_SUBJECTS_FILE, subjects);
-    res.status(201).send("Subject added successfully");
+    res.status(HTTP_STATUS.CREATED).send("Subject added successfully");
   } catch (error) {
-    res.status(500).send("Error adding subject: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error adding subject: " + error.message);
   }
 };
 
@@ -74,13 +84,16 @@ export const updateTeacherSubject = async (req, res) => {
     const recordId = req.params.subjectRecordId;
     const index = subjects.findIndex((s) => s.recordId === recordId);
 
-    if (index === -1) return res.status(404).send("Subject not found");
+    if (index === -1)
+      return res.status(HTTP_STATUS.NOT_FOUND).send("Subject not found");
 
     subjects[index] = { ...subjects[index], ...req.body };
     await saveJsonToTxtFile(TEACHERS_SUBJECTS_FILE, subjects);
     res.send("Subject updated successfully");
   } catch (error) {
-    res.status(500).send("Error updating subject: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error updating subject: " + error.message);
   }
 };
 
@@ -91,13 +104,15 @@ export const deleteTeacherSubject = async (req, res) => {
     const filteredSubjects = subjects.filter((s) => s.recordId !== recordId);
 
     if (filteredSubjects.length === subjects.length)
-      return res.status(404).send("Subject not found");
+      return res.status(HTTP_STATUS.NOT_FOUND).send("Subject not found");
 
     await saveJsonToTxtFile(TEACHERS_SUBJECTS_FILE, filteredSubjects);
     res.send("Subject deleted successfully");
   } catch (error) {
     console.log(error);
-    res.status(500).send("Error deleting subject: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error deleting subject: " + error.message);
   }
 };
 
@@ -109,7 +124,9 @@ export const getTeacherSchedule = async (req, res) => {
     );
     res.send(teacherSchedule);
   } catch (error) {
-    res.status(500).send("Error retrieving schedule: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error retrieving schedule: " + error.message);
   }
 };
 
@@ -127,9 +144,11 @@ export const addTeacherSchedule = async (req, res) => {
     };
     schedule.push(newSchedule);
     await saveJsonToTxtFile(TEACHERS_SCHEDULE_FILE, schedule);
-    res.status(201).send("Schedule added successfully");
+    res.status(HTTP_STATUS.CREATED).send("Schedule added successfully");
   } catch (error) {
-    res.status(500).send("Error adding schedule: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error adding schedule: " + error.message);
   }
 };
 
@@ -139,13 +158,16 @@ export const updateTeacherSchedule = async (req, res) => {
     const recordId = req.params.scheduleRecordId;
     const index = schedule.findIndex((s) => s.recordId === recordId);
 
-    if (index === -1) return res.status(404).send("Schedule not found");
+    if (index === -1)
+      return res.status(HTTP_STATUS.NOT_FOUND).send("Schedule not found");
 
     schedule[index] = { ...schedule[index], ...req.body };
     await saveJsonToTxtFile(TEACHERS_SCHEDULE_FILE, schedule);
     res.send("Schedule updated successfully");
   } catch (error) {
-    res.status(500).send("Error updating schedule: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error updating schedule: " + error.message);
   }
 };
 
@@ -156,12 +178,14 @@ export const deleteTeacherSchedule = async (req, res) => {
     const filteredSchedule = schedule.filter((s) => s.recordId != recordId);
 
     if (filteredSchedule.length === schedule.length)
-      return res.status(404).send("Schedule not found");
+      return res.status(HTTP_STATUS.NOT_FOUND).send("Schedule not found");
 
     await saveJsonToTxtFile(TEACHERS_SCHEDULE_FILE, filteredSchedule);
     res.send("Schedule deleted successfully");
   } catch (error) {
-    res.status(500).send("Error deleting schedule: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error deleting schedule: " + error.message);
   }
 };
 
@@ -174,9 +198,11 @@ export const addTeacher = async (req, res) => {
     };
     teachers.push(newTeacher);
     await saveJsonToTxtFile(TEACHERS_FILE, teachers);
-    res.status(201).send("Teacher added successfully");
+    res.status(HTTP_STATUS.CREATED).send("Teacher added successfully");
   } catch (error) {
-    res.status(500).send("Error adding teacher: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error adding teacher: " + error.message);
   }
 };
 
@@ -186,13 +212,16 @@ export const updateTeacher = async (req, res) => {
     const id = req.params.id;
     const index = teachers.findIndex((t) => t.id === id);
 
-    if (index === -1) return res.status(404).send("Teacher not found");
+    if (index === -1)
+      return res.status(HTTP_STATUS.NOT_FOUND).send("Teacher not found");
 
     teachers[index] = { ...teachers[index], ...req.body };
     await saveJsonToTxtFile(TEACHERS_FILE, teachers);
     res.send("Teacher updated successfully");
   } catch (error) {
-    res.status(500).send("Error updating teacher: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error updating teacher: " + error.message);
   }
 };
 
@@ -203,11 +232,13 @@ export const deleteTeacher = async (req, res) => {
     const filteredTeachers = teachers.filter((t) => t.id !== id);
 
     if (filteredTeachers.length === teachers.length)
-      return res.status(404).send("Teacher not found");
+      return res.status(HTTP_STATUS.NOT_FOUND).send("Teacher not found");
 
     await saveJsonToTxtFile(TEACHERS_FILE, filteredTeachers);
     res.send("Teacher deleted successfully");
   } catch (error) {
-    res.status(500).send("Error deleting teacher: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error deleting teacher: " + error.message);
   }
 };

@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import apiClient from "../api/apiClient";
 import Modal from "../components/Modal";
+import { useNavigate } from "react-router-dom";
 
 const Students = () => {
+  const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [groups, setGroups] = useState([]);
 
@@ -81,7 +83,11 @@ const Students = () => {
         </thead>
         <tbody>
           {students.map((student) => (
-            <tr key={student.id}>
+            <tr
+              className="cursor-pointer hover:bg-yellow-100"
+              onClick={() => navigate(`/students/${student.id}/grades`)}
+              key={student.id}
+            >
               <td className="border px-4 py-2">
                 {student.firstName} {student.lastName}
               </td>
@@ -89,7 +95,7 @@ const Students = () => {
               <td className="border px-4 py-2">{student.group.groupName}</td>
               <td className="border px-4 py-2 space-x-2">
                 <button
-                  className="px-2 py-1 bg-blue-500 text-white rounded"
+                  className="px-2 py-1 bg-yellow-600 text-white rounded"
                   onClick={() => {
                     setStudentData({
                       ...student,

@@ -1,8 +1,6 @@
-id,firstName,lastName,age
-1,Moris,Laney,20
-2,Bob,Smith,40
-3,Charlie,Brown,22
-4,Diana,Evans,19
-5,Michelle,Goggins,21
-6,Nikita,Sokolovskiy,22
-7,Penelopa,Cruise,19
+id,firstName,lastName,age,groupId,group
+1,Katya,Makarevich,20,1,1
+2,Daniil,Kachalovskiy,20,2,2
+4,Nastya,Kot,21,2,2
+6,Nikita,Sokolovskiy,22,1,1
+7,Kirill,Bondarenko,23,1,1

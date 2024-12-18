@@ -61,7 +61,7 @@ const Groups = () => {
       <div className="flex justify-end mb-4">
         <button
           onClick={() => setIsModalOpen(true)}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          className="px-4 py-2 bg-yellow-500 rounded hover:text-white-primary"
         >
           Add Group
         </button>
@@ -83,13 +83,13 @@ const Groups = () => {
             <div className="flex space-x-2">
               <Link
                 to={`/groups/${group.groupId}`}
-                className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                className="px-4 py-2 bg-yellow-500 text-yellow-100 rounded hover:bg-yellow-600"
               >
                 View Details
               </Link>
               <button
                 onClick={() => handleDeleteGroup(group.groupId)}
-                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                className="px-4 py-2 bg-red-500 text-yellow-100  rounded hover:bg-red-600"
               >
                 Delete
               </button>

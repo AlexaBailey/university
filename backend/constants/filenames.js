@@ -1,5 +1,4 @@
 export const STUDENTS_FILE = "students.txt";
-export const STUDENTS_GRADES_FILE = "student_grades.txt";
 export const STUDENTS_GROUPS_FILE = "students_groups.txt";
 
 export const TEACHERS_FILE = "teachers.txt";

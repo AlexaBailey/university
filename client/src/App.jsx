@@ -6,6 +6,8 @@ import TeacherDetail from "./pages/TeacherDetail";
 import Students from "./pages/Students";
 import Groups from "./pages/Groups";
 import GroupDetail from "./pages/GroupDetail";
+import AssessmentDetails from "./pages/AssessmentDetails";
+import StudentGrades from "./pages/StudentGrades";
 
 function App() {
   return (
@@ -16,8 +18,14 @@ function App() {
           <Route path="/teachers" element={<Teachers />} />
           <Route path="/teachers/:id" element={<TeacherDetail />} />
           <Route path="/students" element={<Students />} />
+          <Route path="/students/:id/grades" element={<StudentGrades />} />
+
           <Route path="/groups" element={<Groups />} />
           <Route path="/groups/:id" element={<GroupDetail />} />
+          <Route
+            path="/assessments/:groupLessonId"
+            element={<AssessmentDetails />}
+          />
         </Routes>
       </Layout>
     </Router>

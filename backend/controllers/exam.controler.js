@@ -6,7 +6,8 @@ import {
   STUDENTS_GROUPS_FILE,
   SUBJECTS_FILE,
 } from "../constants/filenames.js";
-import { gradingScale } from "./group.controller.js";
+import { gradingScale } from "../utils/gradingScale.js";
+import { HTTP_STATUS } from "../constants/http.js";
 
 export const getAllExams = async (req, res) => {
   try {
@@ -48,13 +49,15 @@ export const getAllExams = async (req, res) => {
 
     if (enrichedExams.length === 0) {
       return res
-        .status(404)
+        .status(HTTP_STATUS.NOT_FOUND)
         .send("No exams found matching the specified filters.");
     }
 
-    res.status(200).send(enrichedExams);
+    res.status(HTTP_STATUS.OK).send(enrichedExams);
   } catch (error) {
-    res.status(500).send("Error retrieving exams: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error retrieving exams: " + error.message);
   }
 };
 
@@ -64,10 +67,12 @@ export const getExamById = async (req, res) => {
     const exams = await readTxtFileAsJson(EXAMS_INFO_FILE);
     const exam = exams.find((e) => e.examId === id);
 
-    if (!exam) return res.status(404).send("Exam not found.");
-    res.status(200).send(exam);
+    if (!exam) return res.status(HTTP_STATUS.NOT_FOUND).send("Exam not found.");
+    res.status(HTTP_STATUS.OK).send(exam);
   } catch (error) {
-    res.status(500).send("Error retrieving exam: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error retrieving exam: " + error.message);
   }
 };
 
@@ -76,7 +81,9 @@ export const addExam = async (req, res) => {
     const { groupId, teacherId, subjectId, date, time } = req.body;
 
     if (!groupId || !teacherId || !subjectId || !date || !time) {
-      return res.status(400).send("All fields are required.");
+      return res
+        .status(HTTP_STATUS.BAD_REQUEST)
+        .send("All fields are required.");
     }
 
     const exams = await readTxtFileAsJson(EXAMS_INFO_FILE);
@@ -93,9 +100,13 @@ export const addExam = async (req, res) => {
     exams.push(newExam);
     await saveJsonToTxtFile(EXAMS_INFO_FILE, exams);
 
-    res.status(201).send({ message: "Exam added successfully", newExam });
+    res
+      .status(HTTP_STATUS.CREATED)
+      .send({ message: "Exam added successfully", newExam });
   } catch (error) {
-    res.status(500).send("Error adding exam: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error adding exam: " + error.message);
   }
 };
 
@@ -107,7 +118,8 @@ export const updateExam = async (req, res) => {
     const exams = await readTxtFileAsJson(EXAMS_INFO_FILE);
     const index = exams.findIndex((e) => e.examId === id);
 
-    if (index === -1) return res.status(404).send("Exam not found.");
+    if (index === -1)
+      return res.status(HTTP_STATUS.NOT_FOUND).send("Exam not found.");
 
     exams[index] = {
       ...exams[index],
@@ -120,10 +132,12 @@ export const updateExam = async (req, res) => {
 
     await saveJsonToTxtFile(EXAMS_INFO_FILE, exams);
     res
-      .status(200)
+      .status(HTTP_STATUS.OK)
       .send({ message: "Exam updated successfully", exam: exams[index] });
   } catch (error) {
-    res.status(500).send("Error updating exam: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error updating exam: " + error.message);
   }
 };
 
@@ -135,13 +149,15 @@ export const deleteExam = async (req, res) => {
     const filteredExams = exams.filter((e) => e.examId != id);
 
     if (exams.length === filteredExams.length) {
-      return res.status(404).send("Exam not found.");
+      return res.status(HTTP_STATUS.NOT_FOUND).send("Exam not found.");
     }
 
     await saveJsonToTxtFile(EXAMS_INFO_FILE, filteredExams);
-    res.status(200).send("Exam deleted successfully.");
+    res.status(HTTP_STATUS.OK).send("Exam deleted successfully.");
   } catch (error) {
-    res.status(500).send("Error deleting exam: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error deleting exam: " + error.message);
   }
 };
 
@@ -166,13 +182,15 @@ export const getAllExamResults = async (req, res) => {
 
     if (filteredResults.length === 0) {
       return res
-        .status(404)
+        .status(HTTP_STATUS.NOT_FOUND)
         .send("No exam results found for the specified groupId.");
     }
 
-    res.status(200).send(filteredResults);
+    res.status(HTTP_STATUS.OK).send(filteredResults);
   } catch (error) {
-    res.status(500).send("Error retrieving exam results: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error retrieving exam results: " + error.message);
   }
 };
 export const addExamResult = async (req, res) => {
@@ -180,7 +198,7 @@ export const addExamResult = async (req, res) => {
     const { examId } = req.body;
 
     if (!examId) {
-      return res.status(400).send("examId is required.");
+      return res.status(HTTP_STATUS.BAD_REQUEST).send("examId is required.");
     }
 
     const examsInfo = await readTxtFileAsJson(EXAMS_INFO_FILE);
@@ -190,7 +208,9 @@ export const addExamResult = async (req, res) => {
     const exam = examsInfo.find((e) => parseInt(e.examId) === parseInt(examId));
 
     if (!exam) {
-      return res.status(404).send("Exam not found for the provided examId.");
+      return res
+        .status(HTTP_STATUS.NOT_FOUND)
+        .send("Exam not found for the provided examId.");
     }
 
     const { groupId } = exam;
@@ -200,7 +220,9 @@ export const addExamResult = async (req, res) => {
     );
 
     if (!studentsInGroup.length) {
-      return res.status(404).send("No students found for the group.");
+      return res
+        .status(HTTP_STATUS.NOT_FOUND)
+        .send("No students found for the group.");
     }
 
     const newResults = studentsInGroup.map((entry) => ({
@@ -215,11 +237,13 @@ export const addExamResult = async (req, res) => {
     const updatedResults = [...examResults, ...newResults];
     await saveJsonToTxtFile(EXAM_RESULTS_FILE, updatedResults);
 
-    res.status(201).send({
+    res.status(HTTP_STATUS.CREATED).send({
       message: "Exam results added successfully.",
       results: newResults,
     });
   } catch (error) {
-    res.status(500).send("Error adding exam results: " + error.message);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .send("Error adding exam results: " + error.message);
   }
 };
