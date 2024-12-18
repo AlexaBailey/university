@@ -17,6 +17,7 @@
 ```bash
   npm install
 ```
+Запуск
 ```bash
   npm run dev
 ```
@@ -28,6 +29,7 @@
 ```bash
   npm install
 ```
+Запуск
 ```bash
   npm run start
 ```
