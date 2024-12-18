@@ -85,7 +85,7 @@ const Students = () => {
           {students.map((student) => (
             <tr
               className="cursor-pointer hover:bg-yellow-100"
-              onClick={() => navigate(`/students/${student.id}/grades`)}
+              onDoubleClick={() => navigate(`/students/${student.id}/grades`)}
               key={student.id}
             >
               <td className="border px-4 py-2">
