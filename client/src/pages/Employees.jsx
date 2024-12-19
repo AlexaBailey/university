@@ -4,7 +4,8 @@ import axios from "axios";
 const Employees = () => {
   const [employees, setEmployees] = useState([]);
   const [name, setName] = useState("");
-  const [position, setPosition] = useState("");
+  const [section, setSection] = useState("");
+  const [experienceYears, setExperience] = useState(0);
 
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -20,13 +21,17 @@ const Employees = () => {
 
   const addEmployee = async () => {
     try {
+      let fullname = name.split(" ");
+
       const response = await axios.post("http://localhost:4000/employees", {
-        name,
-        position,
+        firstName: fullname[0],
+        lastName: fullname[1],
+        experienceYears,
+        section,
       });
       setEmployees([...employees, response.data]);
       setName("");
-      setPosition("");
+      setSection("");
     } catch (error) {
       console.error("Error adding employee:", error);
     }
@@ -49,10 +54,17 @@ const Employees = () => {
             className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring focus:ring-yellow-300"
           />
           <input
+            type="number"
+            placeholder="Experience"
+            value={experienceYears}
+            onChange={(e) => setExperience(e.target.value)}
+            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring focus:ring-yellow-300"
+          />
+          <input
             type="text"
-            placeholder="Position"
-            value={position}
-            onChange={(e) => setPosition(e.target.value)}
+            placeholder="Section"
+            value={section}
+            onChange={(e) => setSection(e.target.value)}
             className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring focus:ring-yellow-300"
           />
           <button
@@ -70,8 +82,6 @@ const Employees = () => {
             <th className="border px-4 py-2">Name</th>
             <th className="border px-4 py-2">Section</th>
             <th className="border px-4 py-2">Experience</th>
-
-            <th className="border px-4 py-2">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -82,17 +92,6 @@ const Employees = () => {
               </td>
               <td className="border px-4 py-2">{employee.section}</td>
               <td className="border px-4 py-2">{employee.experienceYears}</td>
-
-              <td className="border px-4 py-2">
-                <button
-                  className="bg-red-500 text-yellow-100 px-2 py-1 rounded hover:bg-red-600"
-                  onClick={() => {
-                    setEmployees(employees.filter((e) => e.id !== employee.id));
-                  }}
-                >
-                  Delete
-                </button>
-              </td>
             </tr>
           ))}
         </tbody>

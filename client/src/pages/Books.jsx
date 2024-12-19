@@ -68,7 +68,7 @@ const Books = () => {
                 <p className="text-lg font-medium text-gray-800">
                   {book.title}
                 </p>
-                <p className="text-sm text-gray-500">by {book.author}</p>
+                <p className="text-sm text-gray-500"> {book.author}</p>
               </div>
             </li>
           ))}

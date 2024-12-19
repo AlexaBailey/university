@@ -20,8 +20,11 @@ const Visitors = () => {
 
   const addVisitor = async () => {
     try {
+      let fullname = name.split(" ");
       const response = await axios.post("http://localhost:4000/visitors", {
-        name,
+        firstName: fullname[0],
+        lastName: fullname[1],
+
         registrationDate,
       });
       setVisitors([...visitors, response.data]);
@@ -69,7 +72,6 @@ const Visitors = () => {
           <tr>
             <th className="border px-4 py-2">Name</th>
             <th className="border px-4 py-2">Registered</th>
-            <th className="border px-4 py-2">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -79,16 +81,6 @@ const Visitors = () => {
                 {visitor.firstName} {visitor.lastName}
               </td>
               <td className="border px-4 py-2">{visitor.registrationDate}</td>
-              <td className="border px-4 py-2">
-                <button
-                  className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-                  onClick={() => {
-                    setVisitors(visitors.filter((v) => v.id !== visitor.id));
-                  }}
-                >
-                  Delete
-                </button>
-              </td>
             </tr>
           ))}
         </tbody>
