@@ -303,7 +303,6 @@ const TeacherDetail = () => {
         <table className="table-auto w-full border border-gray-300">
           <thead>
             <tr className="bg-yellow-500 text-black">
-              <th className="border px-4 py-2">Subject ID</th>
               <th className="border px-4 py-2">Subject Name</th>
               <th className="border px-4 py-2">Actions</th>
             </tr>
@@ -311,7 +310,6 @@ const TeacherDetail = () => {
           <tbody>
             {subjects.map((subject) => (
               <tr key={subject.recordId}>
-                <td className="border px-4 py-2">{subject.subject_id}</td>
                 <td className="border px-4 py-2">{subject.subject_name}</td>
                 <td className="border px-4 py-2 space-x-2">
                   <button
@@ -352,7 +350,7 @@ const TeacherDetail = () => {
             <tr className="bg-yellow-500 text-black">
               <th className="border px-4 py-2">Day</th>
               <th className="border px-4 py-2">Time</th>
-              <th className="border px-4 py-2">Subject ID</th>
+              <th className="border px-4 py-2">Subject</th>
               <th className="border px-4 py-2">Actions</th>
             </tr>
           </thead>
@@ -361,7 +359,7 @@ const TeacherDetail = () => {
               <tr key={lesson.recordId}>
                 <td className="border px-4 py-2">{lesson.day}</td>
                 <td className="border px-4 py-2">{lesson.time}</td>
-                <td className="border px-4 py-2">{lesson.subjectId}</td>
+                <td className="border px-4 py-2">{lesson.subject_name}</td>
                 <td className="border px-4 py-2 space-x-2">
                   <button
                     className="px-2 py-1 bg-yellow-600 text-white rounded"
@@ -406,8 +404,8 @@ const TeacherDetail = () => {
         <table className="table-auto w-full border border-gray-300">
           <thead>
             <tr className="bg-yellow-500 text-black">
-              <th className="border px-4 py-2">Group ID</th>
-              <th className="border px-4 py-2">Subject ID</th>
+              <th className="border px-4 py-2">Group</th>
+              <th className="border px-4 py-2">Subject</th>
               <th className="border px-4 py-2">Date</th>
               <th className="border px-4 py-2">Time</th>
               <th className="border px-4 py-2">Assessed</th>
@@ -416,9 +414,13 @@ const TeacherDetail = () => {
           <tbody>
             {groupLessons.length > 0 ? (
               groupLessons.map((lesson) => (
-                <tr key={lesson.groupLessonId}>
-                  <td className="border px-4 py-2">{lesson.groupId}</td>
-                  <td className="border px-4 py-2">{lesson.subjectId}</td>
+                <tr key={lesson.id}>
+                  <td className="border px-4 py-2">
+                    {lesson.resolvedGroup.groupName}
+                  </td>
+                  <td className="border px-4 py-2">
+                    {lesson?.resolvedSubject.subject_name}
+                  </td>
                   <td className="border px-4 py-2">{lesson.date}</td>
                   <td className="border px-4 py-2">{lesson.time}</td>
                   <td className="border px-4 py-2 flex justify-center">
@@ -459,8 +461,8 @@ const TeacherDetail = () => {
           {groupLessons
             .filter((lesson) => !lesson.assessed)
             .map((lesson) => (
-              <option key={lesson.groupLessonId} value={lesson.groupLessonId}>
-                {`Group ID: ${lesson.groupId} - Date: ${lesson.date} - Subject: ${lesson.subjectId}`}
+              <option key={lesson.id} value={lesson.id}>
+                {`Group: ${lesson.resolvedGroup.groupName} - Date: ${lesson.date} - Subject: ${lesson?.resolvedSubject.subject_name}`}
               </option>
             ))}
         </select>
@@ -630,10 +632,8 @@ const TeacherDetail = () => {
             {exams.length > 0 ? (
               exams.map((exam) => (
                 <tr key={exam.examId}>
-                  <td className="border px-4 py-2">{exam.group.groupName}</td>
-                  <td className="border px-4 py-2">
-                    {exam.subject.subject_name}
-                  </td>
+                  <td className="border px-4 py-2">{exam.group.name}</td>
+                  <td className="border px-4 py-2">{exam.subject.name}</td>
                   <td className="border px-4 py-2">{exam.date}</td>
                   <td className="border px-4 py-2">{exam.time}</td>
                   <td className="border px-4 py-2 space-x-2">

@@ -19,11 +19,11 @@ const Groups = () => {
 
       const enrichedGroups = groupsData.data.map((group) => {
         const studentCount = studentsData.data.filter(
-          (student) => student.group.groupId === group.groupId
+          (student) => student.group.id === group.id
         ).length;
 
         const lessonCount = groupLessonsData.data.filter(
-          (lesson) => lesson.groupId === group.groupId
+          (lesson) => lesson.resolvedGroup.id === group.id
         ).length;
 
         return {

@@ -8,7 +8,7 @@ const SubjectsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState("add");
   const [selectedSubject, setSelectedSubject] = useState({
-    subject_id: "",
+    id: "",
     subject_name: "",
   });
 
@@ -32,7 +32,7 @@ const SubjectsPage = () => {
           subject_name: selectedSubject.subject_name,
         });
       } else {
-        await apiClient.put(`/subjects/${selectedSubject.subject_id}`, {
+        await apiClient.put(`/subjects/${selectedSubject.id}`, {
           subject_name: selectedSubject.subject_name,
         });
       }
@@ -56,7 +56,7 @@ const SubjectsPage = () => {
 
   const openAddModal = () => {
     setModalType("add");
-    setSelectedSubject({ subject_id: "", subject_name: "" });
+    setSelectedSubject({ id: "", subject_name: "" });
     setIsModalOpen(true);
   };
 
@@ -68,7 +68,7 @@ const SubjectsPage = () => {
 
   const resetModal = () => {
     setIsModalOpen(false);
-    setSelectedSubject({ subject_id: "", subject_name: "" });
+    setSelectedSubject({ id: "", subject_name: "" });
     setError("");
   };
 
@@ -97,10 +97,8 @@ const SubjectsPage = () => {
         <tbody>
           {subjects.length > 0 ? (
             subjects.map((subject) => (
-              <tr key={subject.subject_id}>
-                <td className="border px-4 py-2 text-center">
-                  {subject.subject_id}
-                </td>
+              <tr key={subject.id}>
+                <td className="border px-4 py-2 text-center">{subject.id}</td>
                 <td className="border px-4 py-2 text-center">
                   {subject.subject_name}
                 </td>
@@ -112,7 +110,7 @@ const SubjectsPage = () => {
                     Edit
                   </button>
                   <button
-                    onClick={() => handleDeleteSubject(subject.subject_id)}
+                    onClick={() => handleDeleteSubject(subject.id)}
                     className="px-2 py-1 bg-red-500 text-yellow-100 rounded hover:bg-red-600"
                   >
                     Delete

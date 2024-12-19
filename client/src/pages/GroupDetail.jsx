@@ -37,7 +37,7 @@ const GroupDetail = () => {
           <tbody>
             <tr>
               <td className="border px-4 py-2 font-semibold">Group ID</td>
-              <td className="border px-4 py-2">{group.groupId}</td>
+              <td className="border px-4 py-2">{group.id}</td>
             </tr>
             <tr>
               <td className="border px-4 py-2 font-semibold">Group Name</td>
@@ -90,9 +90,9 @@ const GroupDetail = () => {
             <tbody>
               {exams.map((exam) => (
                 <tr key={exam.examId}>
-                  <td className="border px-4 py-2">{exam.examId}</td>
+                  <td className="border px-4 py-2">{exam.id}</td>
                   <td className="border px-4 py-2">
-                    {exam.subject?.subject_name || "N/A"}
+                    {exam.subject?.name || "N/A"}
                   </td>
                   <td className="border px-4 py-2">{exam.date}</td>
                   <td className="border px-4 py-2">{exam.time}</td>
@@ -112,7 +112,7 @@ const GroupDetail = () => {
             <thead>
               <tr className="bg-yellow-500 text-black">
                 <th className="border px-4 py-2">Lesson ID</th>
-                <th className="border px-4 py-2">Subject ID</th>
+                <th className="border px-4 py-2">Subject</th>
                 <th className="border px-4 py-2">Date</th>
                 <th className="border px-4 py-2">Time</th>
               </tr>
@@ -121,13 +121,11 @@ const GroupDetail = () => {
               {assessments.map((lesson) => (
                 <tr
                   className="cursor-pointer hover:bg-yellow-500"
-                  onClick={() =>
-                    navigate(`/assessments/${lesson.groupLessonId}`)
-                  }
-                  key={lesson.groupLessonId}
+                  onClick={() => navigate(`/assessments/${lesson.id}`)}
+                  key={lesson.id}
                 >
-                  <td className="border px-4 py-2">{lesson.groupLessonId}</td>
-                  <td className="border px-4 py-2">{lesson.subjectId}</td>
+                  <td className="border px-4 py-2">{lesson.id}</td>
+                  <td className="border px-4 py-2">{lesson.subject_name}</td>
                   <td className="border px-4 py-2">{lesson.date}</td>
                   <td className="border px-4 py-2">{lesson.time}</td>
                 </tr>

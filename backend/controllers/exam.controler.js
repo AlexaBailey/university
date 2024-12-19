@@ -5,47 +5,57 @@ import {
   GROUPS_FILE,
   STUDENTS_GROUPS_FILE,
   SUBJECTS_FILE,
+  TEACHERS_FILE,
 } from "../constants/filenames.js";
 import { gradingScale } from "../utils/gradingScale.js";
 import { HTTP_STATUS } from "../constants/http.js";
+import Link from "../Link/Link.class.js";
 
 export const getAllExams = async (req, res) => {
   try {
     const { groupId, teacherId, date } = req.query;
-
     const examsInfo = await readTxtFileAsJson(EXAMS_INFO_FILE);
-    const groups = await readTxtFileAsJson(GROUPS_FILE);
-    const subjects = await readTxtFileAsJson(SUBJECTS_FILE);
+    const filteredExams = await Promise.all(
+      examsInfo.map(async (exam) => {
+        const resolvedGroup = await new Link(exam.groupId).resolveRow();
+        const resolvedTeacher = await new Link(exam.teacherId).resolveRow();
 
-    const filteredExams = examsInfo.filter((exam) => {
-      const matchesGroup = groupId
-        ? parseInt(exam.groupId) === parseInt(groupId)
-        : true;
-      const matchesTeacher = teacherId
-        ? parseInt(exam.teacherId) === parseInt(teacherId)
-        : true;
-      const matchesDate = date ? exam.date === date : true;
+        const matchesGroup = groupId
+          ? parseInt(resolvedGroup.id) === parseInt(groupId)
+          : true;
+        const matchesTeacher = teacherId
+          ? parseInt(resolvedTeacher.id) === parseInt(teacherId)
+          : true;
+        const matchesDate = date ? exam.date === date : true;
 
-      return matchesGroup && matchesTeacher && matchesDate;
-    });
+        return matchesGroup && matchesTeacher && matchesDate ? exam : null;
+      })
+    );
 
-    const enrichedExams = filteredExams.map((exam) => {
-      const group = groups.find(
-        (g) => parseInt(g.groupId) === parseInt(exam.groupId)
-      );
-      const subject = subjects.find(
-        (s) => parseInt(s.subject_id) === parseInt(exam.subjectId)
-      );
-
-      return {
-        ...exam,
-        group: group || { id: exam.groupId, groupName: "Unknown Group" },
-        subject: subject || {
-          subject_id: exam.subjectId,
-          subject_name: "Unknown Subject",
-        },
-      };
-    });
+    const validExams = filteredExams.filter((exam) => exam !== null);
+    const enrichedExams = await Promise.all(
+      validExams.map(async (exam) => {
+        const resolvedGroup = await new Link(exam.groupId).resolveRow();
+        const resolvedTeacher = await new Link(exam.teacherId).resolveRow();
+        const resolvedSubject = await new Link(exam.subjectId).resolveRow();
+        let { teacherId, groupId, subjectId, ...rest } = exam;
+        return {
+          ...rest,
+          group: {
+            id: resolvedGroup.id,
+            name: resolvedGroup.groupName,
+          },
+          teacher: {
+            id: resolvedTeacher.id,
+            name: `${resolvedTeacher.firstName} ${resolvedTeacher.lastName}`,
+          },
+          subject: {
+            id: resolvedSubject.id,
+            name: resolvedSubject.subject_name,
+          },
+        };
+      })
+    );
 
     if (enrichedExams.length === 0) {
       return res
@@ -60,22 +70,42 @@ export const getAllExams = async (req, res) => {
       .send("Error retrieving exams: " + error.message);
   }
 };
-
 export const getExamById = async (req, res) => {
   try {
     const { id } = req.params;
     const exams = await readTxtFileAsJson(EXAMS_INFO_FILE);
-    const exam = exams.find((e) => e.examId === id);
+    const exam = exams.find((e) => parseInt(e.id) === parseInt(id));
 
     if (!exam) return res.status(HTTP_STATUS.NOT_FOUND).send("Exam not found.");
-    res.status(HTTP_STATUS.OK).send(exam);
+
+    const resolvedGroup = await new Link(exam.groupId).resolveRow();
+    const resolvedTeacher = await new Link(exam.teacherId).resolveRow();
+    const resolvedSubject = await new Link(exam.subjectId).resolveRow();
+    let { teacherId, groupId, subjectId, ...rest } = exam;
+
+    const enrichedExam = {
+      ...rest,
+      group: {
+        id: resolvedGroup.id,
+        name: resolvedGroup.groupName,
+      },
+      teacher: {
+        id: resolvedTeacher.id,
+        name: `${resolvedTeacher.firstName} ${resolvedTeacher.lastName}`,
+      },
+      subject: {
+        id: resolvedSubject.id,
+        name: resolvedSubject.subject_name,
+      },
+    };
+
+    res.status(HTTP_STATUS.OK).send(enrichedExam);
   } catch (error) {
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error retrieving exam: " + error.message);
   }
 };
-
 export const addExam = async (req, res) => {
   try {
     const { groupId, teacherId, subjectId, date, time } = req.body;
@@ -87,12 +117,12 @@ export const addExam = async (req, res) => {
     }
 
     const exams = await readTxtFileAsJson(EXAMS_INFO_FILE);
-
     const newExam = {
-      examId: exams.length ? parseInt(exams[exams.length - 1].examId) + 1 : 1,
-      groupId: parseInt(groupId),
-      teacherId: parseInt(teacherId),
-      subjectId: parseInt(subjectId),
+      rowNumber: exams.length ? parseInt(exams[exams.length - 1].id) + 1 : 1,
+      id: exams.length ? parseInt(exams[exams.length - 1].id) + 1 : 1,
+      groupId: await Link.generateLinkForId(GROUPS_FILE, groupId),
+      teacherId: await Link.generateLinkForId(TEACHERS_FILE, teacherId),
+      subjectId: await Link.generateLinkForId(SUBJECTS_FILE, subjectId),
       date,
       time,
     };
@@ -100,53 +130,105 @@ export const addExam = async (req, res) => {
     exams.push(newExam);
     await saveJsonToTxtFile(EXAMS_INFO_FILE, exams);
 
+    const resolvedGroup = await new Link(groupId).resolveRow();
+    console.log(resolvedGroup);
+    const resolvedTeacher = await new Link(teacherId).resolveRow();
+    console.log(resolvedTeacher);
+
+    const resolvedSubject = await new Link(subjectId).resolveRow();
+    console.log(resolvedSubject);
+
+    const enrichedExam = {
+      ...newExam,
+      group: {
+        id: resolvedGroup.id,
+        name: resolvedGroup.groupName,
+      },
+      teacher: {
+        id: resolvedTeacher.id,
+        name: `${resolvedTeacher.firstName} ${resolvedTeacher.lastName}`,
+      },
+      subject: {
+        id: resolvedSubject.id,
+        name: resolvedSubject.subject_name,
+      },
+    };
+
     res
       .status(HTTP_STATUS.CREATED)
-      .send({ message: "Exam added successfully", newExam });
+      .send({ message: "Exam added successfully", exam: enrichedExam });
   } catch (error) {
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error adding exam: " + error.message);
   }
 };
-
 export const updateExam = async (req, res) => {
   try {
     const { id } = req.params;
     const { groupId, teacherId, subjectId, date, time } = req.body;
 
     const exams = await readTxtFileAsJson(EXAMS_INFO_FILE);
-    const index = exams.findIndex((e) => e.examId === id);
+    const index = exams.findIndex((e) => parseInt(e.id) === parseInt(id));
 
     if (index === -1)
       return res.status(HTTP_STATUS.NOT_FOUND).send("Exam not found.");
 
     exams[index] = {
       ...exams[index],
-      groupId: groupId || exams[index].groupId,
-      teacherId: teacherId || exams[index].teacherId,
-      subjectId: subjectId || exams[index].subjectId,
+      groupId: await Link.generateLinkForId(
+        GROUPS_FILE,
+        groupId || exams[index].groupId
+      ),
+      teacherId: await Link.generateLinkForId(
+        TEACHERS_FILE,
+        teacherId || exams[index].teacherId
+      ),
+      subjectId: await Link.generateLinkForId(
+        SUBJECTS_FILE,
+        subjectId || exams[index].subjectId
+      ),
       date: date || exams[index].date,
       time: time || exams[index].time,
     };
 
     await saveJsonToTxtFile(EXAMS_INFO_FILE, exams);
+
+    const resolvedGroup = await new Link(exams[index].groupId).resolveRow();
+    const resolvedTeacher = await new Link(exams[index].teacherId).resolveRow();
+    const resolvedSubject = await new Link(exams[index].subjectId).resolveRow();
+
+    const enrichedExam = {
+      ...exams[index],
+      group: {
+        id: resolvedGroup.id,
+        name: resolvedGroup.groupName,
+      },
+      teacher: {
+        id: resolvedTeacher.id,
+        name: `${resolvedTeacher.firstName} ${resolvedTeacher.lastName}`,
+      },
+      subject: {
+        id: resolvedSubject.id,
+        name: resolvedSubject.subject_name,
+      },
+    };
+
     res
       .status(HTTP_STATUS.OK)
-      .send({ message: "Exam updated successfully", exam: exams[index] });
+      .send({ message: "Exam updated successfully", exam: enrichedExam });
   } catch (error) {
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error updating exam: " + error.message);
   }
 };
-
 export const deleteExam = async (req, res) => {
   try {
     const { id } = req.params;
 
     const exams = await readTxtFileAsJson(EXAMS_INFO_FILE);
-    const filteredExams = exams.filter((e) => e.examId != id);
+    const filteredExams = exams.filter((e) => parseInt(e.id) !== parseInt(id));
 
     if (exams.length === filteredExams.length) {
       return res.status(HTTP_STATUS.NOT_FOUND).send("Exam not found.");
@@ -160,7 +242,6 @@ export const deleteExam = async (req, res) => {
       .send("Error deleting exam: " + error.message);
   }
 };
-
 export const getAllExamResults = async (req, res) => {
   try {
     const { groupId } = req.query;
@@ -168,31 +249,63 @@ export const getAllExamResults = async (req, res) => {
     const examResults = await readTxtFileAsJson(EXAM_RESULTS_FILE);
     const examsInfo = await readTxtFileAsJson(EXAMS_INFO_FILE);
 
-    let filteredResults = examResults;
+    const enrichedResults = await Promise.all(
+      examResults.map(async (result) => {
+        try {
+          const resolvedExam = await new Link(result.examId).resolveRow();
+          if (!resolvedExam) return null;
 
-    if (groupId) {
-      const examIdsForGroup = examsInfo
-        .filter((exam) => parseInt(exam.groupId) === parseInt(groupId))
-        .map((exam) => exam.examId);
+          const resolvedGroup = await new Link(
+            resolvedExam.groupId
+          ).resolveRow();
+          if (groupId && parseInt(resolvedGroup.id) !== parseInt(groupId))
+            return null;
 
-      filteredResults = examResults.filter((result) =>
-        examIdsForGroup.includes(result.examId)
-      );
-    }
+          const resolvedSubject = await new Link(
+            resolvedExam.subjectId
+          ).resolveRow();
+          const resolvedStudent = await new Link(result.studentId).resolveRow();
 
-    if (filteredResults.length === 0) {
+          return {
+            ...result,
+            student: {
+              id: resolvedStudent.id,
+              name: `${resolvedStudent.firstName} ${resolvedStudent.lastName}`,
+            },
+            group: {
+              id: resolvedGroup.id,
+              name: resolvedGroup.groupName,
+            },
+            subject: {
+              id: resolvedSubject.id,
+              name: resolvedSubject.subject_name,
+            },
+            date: resolvedExam.date,
+            time: resolvedExam.time,
+          };
+        } catch (err) {
+          console.error("Error resolving result:", err.message);
+          return null;
+        }
+      })
+    );
+
+    const validResults = enrichedResults.filter((result) => result !== null);
+
+    if (validResults.length === 0) {
       return res
         .status(HTTP_STATUS.NOT_FOUND)
         .send("No exam results found for the specified groupId.");
     }
 
-    res.status(HTTP_STATUS.OK).send(filteredResults);
+    res.status(HTTP_STATUS.OK).send(validResults);
   } catch (error) {
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error retrieving exam results: " + error.message);
   }
 };
+
 export const addExamResult = async (req, res) => {
   try {
     const { examId } = req.body;
@@ -205,7 +318,7 @@ export const addExamResult = async (req, res) => {
     const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
     const examResults = await readTxtFileAsJson(EXAM_RESULTS_FILE);
 
-    const exam = examsInfo.find((e) => parseInt(e.examId) === parseInt(examId));
+    const exam = examsInfo.find((e) => parseInt(e.id) === parseInt(examId));
 
     if (!exam) {
       return res
@@ -213,26 +326,49 @@ export const addExamResult = async (req, res) => {
         .send("Exam not found for the provided examId.");
     }
 
-    const { groupId } = exam;
+    const resolvedGroup = await new Link(exam.groupId).resolveRow();
+    if (!resolvedGroup) {
+      return res
+        .status(HTTP_STATUS.NOT_FOUND)
+        .send("Group linked to the exam not found.");
+    }
 
-    const studentsInGroup = studentGroups.filter(
-      (entry) => parseInt(entry.groupId) === parseInt(groupId)
+    const studentsInGroup = await Promise.all(
+      studentGroups.map(async (entry) => {
+        const resolvedStudentGroup = await new Link(entry.groupId).resolveRow();
+        return parseInt(resolvedStudentGroup.id) === parseInt(resolvedGroup.id)
+          ? entry
+          : null;
+      })
     );
 
-    if (!studentsInGroup.length) {
+    const validStudentsInGroup = studentsInGroup.filter(
+      (entry) => entry !== null
+    );
+
+    if (!validStudentsInGroup.length) {
       return res
         .status(HTTP_STATUS.NOT_FOUND)
         .send("No students found for the group.");
     }
 
-    const newResults = studentsInGroup.map((entry) => ({
-      recordId: examResults.length
-        ? parseInt(examResults[examResults.length - 1].recordId) + 1
-        : 1,
-      examId: parseInt(examId),
-      studentId: entry.studentId,
-      mark: gradingScale(),
-    }));
+    const lastRecordId = examResults.length
+      ? parseInt(examResults[examResults.length - 1].recordId)
+      : 0;
+
+    const newResults = await Promise.all(
+      validStudentsInGroup.map(async (entry, index) => {
+        const studentLink = entry.studentId;
+        const examLink = await Link.generateLinkForId(EXAMS_INFO_FILE, examId);
+
+        return {
+          recordId: lastRecordId + index + 1,
+          examId: examLink,
+          studentId: studentLink,
+          mark: gradingScale(),
+        };
+      })
+    );
 
     const updatedResults = [...examResults, ...newResults];
     await saveJsonToTxtFile(EXAM_RESULTS_FILE, updatedResults);

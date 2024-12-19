@@ -92,7 +92,7 @@ const Students = () => {
                 {student.firstName} {student.lastName}
               </td>
               <td className="border px-4 py-2">{student.age}</td>
-              <td className="border px-4 py-2">{student.group.groupName}</td>
+              <td className="border px-4 py-2">{student.group.name}</td>
               <td className="border px-4 py-2 space-x-2">
                 <button
                   className="px-2 py-1 bg-yellow-600 text-white rounded"
@@ -163,12 +163,12 @@ const Students = () => {
         >
           <option value="">
             {studentData.group
-              ? groups.find((g) => g.groupId == studentData.group)?.groupName ||
+              ? groups.find((g) => g.groupId == studentData.group)?.name ||
                 "Select Group"
               : "Select Group"}
           </option>
           {groups.map((group) => (
-            <option key={group.groupId} value={group.groupId}>
+            <option key={group.id} value={group.id}>
               {group.groupName}
             </option>
           ))}

@@ -4,6 +4,7 @@ import {
 } from "../constants/filenames.js";
 import { readTxtFileAsJson, saveJsonToTxtFile } from "../utils/fileHandlers.js";
 import { HTTP_STATUS } from "../constants/http.js";
+import Link from "../Link/Link.class.js";
 
 export const getAllSubjects = async (req, res) => {
   try {
@@ -33,7 +34,17 @@ export const updateSubject = async (req, res) => {
     }
 
     const subjects = await readTxtFileAsJson(SUBJECTS_FILE);
-    const index = subjects.findIndex((sub) => sub.subject_id === id);
+    const resolvedSubject = await Link.findById(SUBJECTS_FILE, id);
+    if (!resolvedSubject) {
+      return res
+        .status(HTTP_STATUS.NOT_FOUND)
+        .send("Subject not found with the given ID.");
+    }
+
+    const index = subjects.findIndex(
+      (sub) => parseInt(sub.id) === parseInt(resolvedSubject.id)
+    );
+    subjects[index] = { ...subjects[index], subject_name };
 
     if (index === -1) {
       return res
@@ -54,37 +65,48 @@ export const updateSubject = async (req, res) => {
       .send("Error updating subject: " + error.message);
   }
 };
-
 export const deleteSubject = async (req, res) => {
   try {
     const { id } = req.params;
 
     const subjects = await readTxtFileAsJson(SUBJECTS_FILE);
     const teacherSubjects = await readTxtFileAsJson(TEACHERS_SUBJECTS_FILE);
-    const filteredSubjects = subjects.filter((sub) => sub.subject_id !== id);
-
-    if (filteredSubjects.length === subjects.length) {
+    const resolvedSubject = await Link.findById(SUBJECTS_FILE, id);
+    if (!resolvedSubject) {
       return res
         .status(HTTP_STATUS.NOT_FOUND)
         .send("Subject not found with the given ID.");
     }
-
-    const filteredTeacherSubjects = teacherSubjects.filter(
-      (teacherSubject) => teacherSubject.subject_id !== id
+    const filteredSubjects = subjects.filter(
+      (sub) => parseInt(sub.id) !== parseInt(id)
     );
+    const filteredTeacherSubjects = await Promise.all(
+      teacherSubjects.map(async (teacherSubject) => {
+        const resolvedTeacherSubject = await new Link(
+          teacherSubject.subject_id
+        ).resolveRow();
+        return parseInt(resolvedTeacherSubject.subject_id) !== parseInt(id)
+          ? teacherSubject
+          : null;
+      })
+    );
+
     await saveJsonToTxtFile(SUBJECTS_FILE, filteredSubjects);
-    await saveJsonToTxtFile(TEACHERS_SUBJECTS_FILE, filteredTeacherSubjects);
+    await saveJsonToTxtFile(
+      TEACHERS_SUBJECTS_FILE,
+      filteredTeacherSubjects.filter(Boolean)
+    );
 
     res.status(HTTP_STATUS.OK).send({
       message: "Subject and associated teacher mappings deleted successfully.",
     });
   } catch (error) {
+    console.error("Error deleting subject:", error.message);
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error deleting subject: " + error.message);
   }
 };
-
 export const addSubject = async (req, res) => {
   try {
     const { subject_name } = req.body;
@@ -98,9 +120,11 @@ export const addSubject = async (req, res) => {
     const subjects = await readTxtFileAsJson(SUBJECTS_FILE);
 
     const newSubject = {
-      subject_id: subjects.length
-        ? parseInt(subjects[subjects.length - 1].subject_id) + 1
-        : 1,
+      rowNumber: subjects.length ? parseInt(subjects.length) + 1 : 1,
+      id:
+        subjects.length > 0
+          ? Math.max(...subjects.map((subject) => parseInt(subject.id))) + 1
+          : 1,
       subject_name,
     };
 
@@ -113,6 +137,7 @@ export const addSubject = async (req, res) => {
       newSubject,
     });
   } catch (error) {
+    console.error("Error adding subject:", error.message);
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error adding subject: " + error.message);

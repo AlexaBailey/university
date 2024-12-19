@@ -8,6 +8,7 @@ import {
 import { readTxtFileAsJson, saveJsonToTxtFile } from "../utils/fileHandlers.js";
 import { gradingScale } from "../utils/gradingScale.js";
 import { HTTP_STATUS } from "../constants/http.js";
+import Link from "../Link/Link.class.js";
 
 export const assessGroup = async (req, res) => {
   try {
@@ -20,10 +21,7 @@ export const assessGroup = async (req, res) => {
     const groupLessons = await readTxtFileAsJson(GROUPS_LESSONS_FILE);
     const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
     const assessments = await readTxtFileAsJson(ASSESSMENTS_FILE);
-
-    const groupLesson = groupLessons.find(
-      (lesson) => parseInt(lesson.groupLessonId) === parseInt(recordId)
-    );
+    const groupLesson = await Link.findById(GROUPS_LESSONS_FILE, recordId);
 
     if (!groupLesson) {
       return res
@@ -31,23 +29,52 @@ export const assessGroup = async (req, res) => {
         .send("No lesson found for the given recordId.");
     }
 
-    const { groupId, groupLessonId } = groupLesson;
+    const resolvedGroup = await new Link(groupLesson.groupId).resolveRow();
+    if (!resolvedGroup) {
+      return res
+        .status(HTTP_STATUS.NOT_FOUND)
+        .send("Group linked to the lesson not found.");
+    }
 
-    const groupStudents = studentGroups.filter(
-      (entry) => parseInt(entry.groupId) === parseInt(groupId)
+    const groupStudents = await Promise.all(
+      studentGroups
+        .filter((entry) => entry.groupId == groupLesson.groupId)
+        .map(async (entry) => {
+          const resolvedStudent = await new Link(entry.studentId).resolveRow();
+          return resolvedStudent
+            ? { ...entry, student: resolvedStudent }
+            : null;
+        })
     );
 
-    if (!groupStudents.length) {
+    const validGroupStudents = groupStudents.filter((entry) => entry !== null);
+
+    if (!validGroupStudents.length) {
       return res
         .status(HTTP_STATUS.NOT_FOUND)
         .send("No students found in this group.");
     }
 
-    const newAssessments = groupStudents.map((entry) => ({
-      groupLessonId,
-      studentId: entry.studentId,
-      mark: gradingScale(),
-    }));
+    const newAssessments = await Promise.all(
+      validGroupStudents.map(async (entry, index) => {
+        const maxRecordId = assessments.length
+          ? Math.max(...assessments.map((a) => parseInt(a.recordId))) + 1
+          : 1;
+
+        return {
+          recordId: maxRecordId + index,
+          groupLessonId: await Link.generateLinkForId(
+            GROUPS_LESSONS_FILE,
+            groupLesson.id
+          ),
+          studentId: await Link.generateLinkForId(
+            STUDENTS_FILE,
+            entry.student.id
+          ),
+          mark: gradingScale(),
+        };
+      })
+    );
 
     const updatedAssessments = [...assessments, ...newAssessments];
 
@@ -64,45 +91,58 @@ export const assessGroup = async (req, res) => {
       .send("Error assessing group: " + error.message);
   }
 };
-
 export const getAssessmentDetails = async (req, res) => {
   try {
     const { groupLessonId } = req.params;
+
+    if (!groupLessonId) {
+      return res
+        .status(HTTP_STATUS.BAD_REQUEST)
+        .send("groupLessonId is required.");
+    }
+
     const assessments = await readTxtFileAsJson(ASSESSMENTS_FILE);
-    const students = await readTxtFileAsJson(STUDENTS_FILE);
 
     const relevantAssessments = assessments.filter(
       (a) => parseInt(a.groupLessonId) === parseInt(groupLessonId)
     );
 
-    if (relevantAssessments.length === 0) {
-      return res
-        .status(HTTP_STATUS.NOT_FOUND)
-        .send("No assessments found for this lesson.");
-    }
+    const assessed = relevantAssessments.length > 0;
 
-    const detailedAssessments = relevantAssessments.map((a) => {
-      const student = students.find(
-        (s) => parseInt(s.id) === parseInt(a.studentId)
-      );
-      return {
-        groupLessonId: a.groupLessonId,
-        studentId: a.studentId,
-        studentName: student
-          ? `${student.firstName} ${student.lastName}`
-          : "Unknown",
-        mark: a.mark,
-      };
+    const detailedAssessments = await Promise.all(
+      relevantAssessments.map(async (a) => {
+        try {
+          const resolvedStudent = await new Link(a.studentId).resolveRow();
+          return {
+            groupLessonId: a.groupLessonId,
+            studentId: a.studentId,
+            studentName: resolvedStudent
+              ? `${resolvedStudent.firstName} ${resolvedStudent.lastName}`
+              : "Unknown",
+            mark: a.mark,
+          };
+        } catch (err) {
+          return {
+            groupLessonId: a.groupLessonId,
+            studentId: a.studentId,
+            studentName: "Unknown",
+            mark: a.mark,
+          };
+        }
+      })
+    );
+
+    res.status(HTTP_STATUS.OK).send({
+      assessed,
+      details: detailedAssessments,
     });
-
-    res.status(HTTP_STATUS.OK).send(detailedAssessments);
   } catch (error) {
+    console.error("Error retrieving assessment details:", error.message);
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error retrieving assessment details: " + error.message);
   }
 };
-
 export const getGroupLessons = async (req, res) => {
   try {
     const { groupId, teacherId, date } = req.query;
@@ -110,25 +150,58 @@ export const getGroupLessons = async (req, res) => {
     const groupLessons = await readTxtFileAsJson(GROUPS_LESSONS_FILE);
     const assessments = await readTxtFileAsJson(ASSESSMENTS_FILE);
 
-    const filteredLessons = groupLessons.filter((lesson) => {
-      const matchesGroup = groupId ? lesson.groupId === groupId : true;
-      const matchesTeacher = teacherId ? lesson.teacherId === teacherId : true;
-      const matchesDate = date ? lesson.date === date : true;
+    const filteredLessons = await Promise.all(
+      groupLessons.map(async (lesson) => {
+        try {
+          const resolvedGroup = await new Link(lesson.groupId).resolveRow();
+          const resolvedTeacher = await new Link(lesson.teacherId).resolveRow();
+          const resolvedSubject = await new Link(lesson.subjectId).resolveRow();
 
-      return matchesGroup && matchesTeacher && matchesDate;
-    });
+          const matchesGroup = groupId
+            ? parseInt(resolvedGroup.id) === parseInt(groupId)
+            : true;
+          const matchesTeacher = teacherId
+            ? parseInt(resolvedTeacher.id) === parseInt(teacherId)
+            : true;
+          const matchesDate = date ? lesson.date === date : true;
 
-    const enrichedLessons = filteredLessons.map((lesson) => {
-      const alreadyAssessed = assessments.some(
-        (assessment) =>
-          parseInt(assessment.groupLessonId) === parseInt(lesson.groupLessonId)
-      );
+          return matchesGroup && matchesTeacher && matchesDate
+            ? {
+                ...lesson,
+                resolvedGroup,
+                resolvedTeacher,
+                resolvedSubject,
+              }
+            : null;
+        } catch (err) {
+          return null;
+        }
+      })
+    );
 
-      return {
-        ...lesson,
-        assessed: alreadyAssessed,
-      };
-    });
+    const validLessons = filteredLessons.filter((lesson) => lesson !== null);
+
+    const enrichedLessons = await Promise.all(
+      validLessons.map(async (lesson) => {
+        const alreadyAssessed = await Promise.all(
+          assessments.map(async (assessment) => {
+            const resolvedAssessment = await new Link(
+              assessment.groupLessonId
+            ).resolveRow();
+            return parseInt(resolvedAssessment.id) === parseInt(lesson.id);
+          })
+        );
+
+        return {
+          ...lesson,
+          assessed: alreadyAssessed.includes(true),
+          subject: {
+            id: lesson.resolvedSubject.id,
+            name: lesson.resolvedSubject.subject_name,
+          },
+        };
+      })
+    );
 
     if (enrichedLessons.length === 0) {
       return res
@@ -138,6 +211,7 @@ export const getGroupLessons = async (req, res) => {
 
     res.status(HTTP_STATUS.OK).send(enrichedLessons);
   } catch (error) {
+    console.error("Error retrieving group lessons:", error.message);
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error retrieving group lessons: " + error.message);
@@ -153,6 +227,15 @@ export const addGroupLesson = async (req, res) => {
         .status(HTTP_STATUS.BAD_REQUEST)
         .send("All fields are required.");
     }
+    const resolvedGroup = await new Link(groupId).resolveRow();
+    const resolvedTeacher = await new Link(teacherId).resolveRow();
+    const resolvedSubject = await new Link(subjectId).resolveRow();
+
+    if (!resolvedGroup || !resolvedTeacher || !resolvedSubject) {
+      return res
+        .status(HTTP_STATUS.NOT_FOUND)
+        .send("Invalid group, teacher, or subject ID provided.");
+    }
 
     const groupLessons = await readTxtFileAsJson(GROUPS_LESSONS_FILE);
 
@@ -160,9 +243,15 @@ export const addGroupLesson = async (req, res) => {
       groupLessonId: groupLessons.length
         ? parseInt(groupLessons[groupLessons.length - 1].groupLessonId) + 1
         : 1,
-      groupId,
-      teacherId,
-      subjectId,
+      groupId: await Link.generateLinkForId(GROUPS_FILE, resolvedGroup.id),
+      teacherId: await Link.generateLinkForId(
+        TEACHERS_FILE,
+        resolvedTeacher.id
+      ),
+      subjectId: await Link.generateLinkForId(
+        SUBJECTS_FILE,
+        resolvedSubject.id
+      ),
       date,
       time,
     };
@@ -170,10 +259,12 @@ export const addGroupLesson = async (req, res) => {
     groupLessons.push(newLesson);
     await saveJsonToTxtFile(GROUPS_LESSONS_FILE, groupLessons);
 
-    res
-      .status(HTTP_STATUS.CREATED)
-      .send({ message: "Group lesson added successfully.", newLesson });
+    res.status(HTTP_STATUS.CREATED).send({
+      message: "Group lesson added successfully.",
+      newLesson,
+    });
   } catch (error) {
+    console.error("Error adding group lesson:", error.message);
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error adding group lesson: " + error.message);
@@ -193,30 +284,47 @@ export const addGroup = async (req, res) => {
     const groups = await readTxtFileAsJson(GROUPS_FILE);
 
     const newGroup = {
-      groupId: groups.length
-        ? parseInt(groups[groups.length - 1].groupId) + 1
-        : 1,
+      rowNumber: groups.length ? parseInt(groups[groups.length - 1].id) + 1 : 1,
+      id:
+        groups.length > 0
+          ? Math.max(...groups.map((group) => parseInt(group.id))) + 1
+          : 1,
       groupName,
     };
 
     groups.push(newGroup);
     await saveJsonToTxtFile(GROUPS_FILE, groups);
+    console.log(newGroup);
 
-    res
-      .status(HTTP_STATUS.CREATED)
-      .send({ message: "Group added successfully.", newGroup });
+    const groupLink = await Link.generateLinkForId(GROUPS_FILE, newGroup.id);
+
+    res.status(HTTP_STATUS.CREATED).send({
+      message: "Group added successfully.",
+      newGroup: {
+        ...newGroup,
+        groupId: groupLink,
+      },
+    });
   } catch (error) {
+    console.error("Error adding group:", error.message);
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error adding group: " + error.message);
   }
 };
-
 export const getAllGroups = async (req, res) => {
   try {
     const groups = await readTxtFileAsJson(GROUPS_FILE);
-    res.status(HTTP_STATUS.OK).send(groups);
+    const enrichedGroups = await Promise.all(
+      groups.map(async (group) => ({
+        ...group,
+        groupId: group.id,
+      }))
+    );
+
+    res.status(HTTP_STATUS.OK).send(enrichedGroups);
   } catch (error) {
+    console.error("Error retrieving groups:", error.message);
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error retrieving groups: " + error.message);
@@ -226,16 +334,20 @@ export const getAllGroups = async (req, res) => {
 export const getGroupById = async (req, res) => {
   try {
     const { id } = req.params;
-    const groups = await readTxtFileAsJson(GROUPS_FILE);
+    console.log(req.params.id);
+    const resolvedGroup = await Link.findById(GROUPS_FILE, id);
 
-    const group = groups.find((g) => g.groupId === id);
-
-    if (!group) {
+    if (!resolvedGroup) {
       return res.status(HTTP_STATUS.NOT_FOUND).send("Group not found.");
     }
 
-    res.status(HTTP_STATUS.OK).send(group);
+    const enrichedGroup = {
+      ...resolvedGroup,
+    };
+
+    res.status(HTTP_STATUS.OK).send(enrichedGroup);
   } catch (error) {
+    console.error("Error retrieving group by ID:", error.message);
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error retrieving group: " + error.message);
@@ -248,23 +360,21 @@ export const updateGroup = async (req, res) => {
     const { groupName } = req.body;
 
     const groups = await readTxtFileAsJson(GROUPS_FILE);
-    const index = groups.findIndex((g) => g.groupId === id);
+    const resolvedGroup = await Link.findById(GROUPS_FILE, id);
 
-    if (index === -1) {
+    if (!resolvedGroup) {
       return res.status(HTTP_STATUS.NOT_FOUND).send("Group not found.");
     }
-
-    groups[index] = {
-      ...groups[index],
-      groupName: groupName || groups[index].groupName,
-    };
+    resolvedGroup.groupName = groupName || resolvedGroup.groupName;
 
     await saveJsonToTxtFile(GROUPS_FILE, groups);
 
-    res
-      .status(HTTP_STATUS.OK)
-      .send({ message: "Group updated successfully.", group: groups[index] });
+    res.status(HTTP_STATUS.OK).send({
+      message: "Group updated successfully.",
+      group: resolvedGroup,
+    });
   } catch (error) {
+    console.error("Error updating group:", error.message);
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error updating group: " + error.message);
@@ -274,36 +384,42 @@ export const updateGroup = async (req, res) => {
 export const deleteGroup = async (req, res) => {
   try {
     const { id } = req.params;
+
     const groups = await readTxtFileAsJson(GROUPS_FILE);
-    const students = await readTxtFileAsJson(STUDENTS_FILE);
     const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
-    const filteredGroups = groups.filter((g) => g.groupId !== id);
-    if (groups.length === filteredGroups.length) {
+
+    const resolvedGroup = await Link.findById(GROUPS_FILE, id);
+    if (!resolvedGroup) {
       return res.status(HTTP_STATUS.NOT_FOUND).send("Group not found.");
     }
-    const studentGroupEntries = studentGroups.filter((sg) => sg.groupId === id);
-    const studentIdsToDelete = studentGroupEntries.map((sg) => sg.studentId);
-    const filteredStudents = students.filter(
-      (student) => !studentIdsToDelete.includes(student.id)
-    );
-    const filteredStudentGroups = studentGroups.filter(
-      (sg) => sg.groupId !== id
-    );
-    await saveJsonToTxtFile(GROUPS_FILE, filteredGroups);
-    await saveJsonToTxtFile(STUDENTS_FILE, filteredStudents);
-    await saveJsonToTxtFile(STUDENTS_GROUPS_FILE, filteredStudentGroups);
 
-    res
-      .status(HTTP_STATUS.OK)
-      .send(
-        `Group and associated students deleted successfully. Deleted ${studentIdsToDelete.length} students.`
-      );
+    const filteredGroups = groups.filter(
+      (group) => group.id !== resolvedGroup.id
+    );
+
+    const filteredStudentGroups = await Promise.all(
+      studentGroups.filter(async (studentGroup) => {
+        const resolvedGroupLink = await new Link(
+          studentGroup.groupId
+        ).resolveRow();
+        return resolvedGroupLink.id !== resolvedGroup.id;
+      })
+    );
+
+    await saveJsonToTxtFile(STUDENTS_GROUPS_FILE, filteredStudentGroups);
+    await saveJsonToTxtFile(GROUPS_FILE, filteredGroups);
+
+    res.status(HTTP_STATUS.OK).send({
+      message: `Group and associated student links deleted successfully.`,
+    });
   } catch (error) {
+    console.error("Error deleting group:", error.message);
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
-      .send("Error deleting group and students: " + error.message);
+      .send("Error deleting group: " + error.message);
   }
 };
+
 export const getStudentsByGroup = async (req, res) => {
   try {
     const id = req.params.id;
@@ -314,25 +430,42 @@ export const getStudentsByGroup = async (req, res) => {
         .send("Group ID is required and must be a number.");
     }
 
-    const students = await readTxtFileAsJson(STUDENTS_FILE);
     const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
+    const filteredStudentGroups = (
+      await Promise.all(
+        studentGroups.map(async (entry) => {
+          const resolvedGroup = await new Link(entry.groupId).resolveRow();
+          if (parseInt(resolvedGroup.id) === parseInt(id)) {
+            return entry;
+          }
+          return null;
+        })
+      )
+    ).filter(Boolean);
 
-    const studentIdsInGroup = studentGroups
-      .filter((entry) => entry.groupId === id)
-      .map((entry) => entry.studentId);
-
-    const studentsInGroup = students.filter((student) =>
-      studentIdsInGroup.includes(student.id)
-    );
-
-    if (studentsInGroup.length === 0) {
+    if (filteredStudentGroups.length === 0) {
       return res
         .status(HTTP_STATUS.NOT_FOUND)
         .send("No students found for this group.");
     }
+    const studentsInGroup = await Promise.all(
+      filteredStudentGroups.map(async (entry) => {
+        const resolvedStudent = await new Link(entry.studentId).resolveRow();
+        return resolvedStudent;
+      })
+    );
 
-    res.status(HTTP_STATUS.OK).send(studentsInGroup);
+    const validStudents = studentsInGroup.filter((student) => student !== null);
+
+    if (validStudents.length === 0) {
+      return res
+        .status(HTTP_STATUS.NOT_FOUND)
+        .send("No valid students found for this group.");
+    }
+
+    res.status(HTTP_STATUS.OK).send(validStudents);
   } catch (error) {
+    console.error("Error retrieving students by group:", error.message);
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error retrieving students by group: " + error.message);

@@ -1,4 +1,5 @@
-id,firstName,lastName,age
-1,Tatiana,Girel,50
-2,Andrey,Mihnyaev,33
-3,Yulia,Daviduk,21
+rowNumber,id,firstName,lastName,age
+1,1,Tatiana,Girel,33
+2,2,Andrey,Mihnyaev,33
+3,3,Yulia,Daviduk,21
+4,4,Alexa,Serko,20

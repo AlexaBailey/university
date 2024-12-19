@@ -6,13 +6,13 @@ import {
 } from "../constants/filenames.js";
 import { readTxtFileAsJson, saveJsonToTxtFile } from "../utils/fileHandlers.js";
 import { HTTP_STATUS } from "../constants/http.js";
+import Link from "../Link/Link.class.js";
 
 export const getAllTeachers = async (req, res) => {
   try {
     const teachers = await readTxtFileAsJson(TEACHERS_FILE);
-    res.send(teachers);
+    res.status(HTTP_STATUS.OK).send(teachers);
   } catch (error) {
-    console.log(error);
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error reading teachers data: " + error.message);
@@ -21,37 +21,45 @@ export const getAllTeachers = async (req, res) => {
 
 export const getTeacherById = async (req, res) => {
   try {
-    const teachers = await readTxtFileAsJson(TEACHERS_FILE);
-    const teacher = teachers.find((t) => t.id === req.params.id);
-    if (!teacher)
+    const teacher = await Link.findById(TEACHERS_FILE, req.params.id);
+    if (!teacher) {
       return res.status(HTTP_STATUS.NOT_FOUND).send("Teacher not found");
-    res.send(teacher);
+    }
+    res.status(HTTP_STATUS.OK).send(teacher);
   } catch (error) {
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error retrieving teacher: " + error.message);
   }
 };
-
 export const getTeacherSubjects = async (req, res) => {
   try {
-    const subjects = await readTxtFileAsJson(SUBJECTS_FILE);
+    const teacherId = req.params.id;
     const teacherSubjects = await readTxtFileAsJson(TEACHERS_SUBJECTS_FILE);
+    const result = await Promise.all(
+      teacherSubjects.map(async (ts) => {
+        const resolvedTeacher = await new Link(ts.teacherId).resolveRow();
+        if (resolvedTeacher.id !== teacherId) return null;
 
-    const result = teacherSubjects
-      .filter((ts) => ts.teacherId === req.params.id)
-      .map((ts) => {
-        const subject = subjects.find(
-          (sub) => sub.subject_id === ts.subject_id
-        );
+        const resolvedSubject = await new Link(ts.subject_id).resolveRow();
         return {
           ...ts,
-          subject_name: subject ? subject.subject_name : "Unknown",
+          teacher_name: `${resolvedTeacher.firstName} ${resolvedTeacher.lastName}`,
+          subject_name: resolvedSubject?.subject_name || "Unknown",
         };
-      });
+      })
+    );
+    const filteredResult = result.filter(Boolean);
 
-    res.send(result);
+    if (filteredResult.length === 0) {
+      return res
+        .status(HTTP_STATUS.NOT_FOUND)
+        .send("No subjects found for the specified teacher.");
+    }
+
+    res.status(HTTP_STATUS.OK).send(filteredResult);
   } catch (error) {
+    console.error("Error retrieving teacher subjects:", error.message);
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error retrieving teacher subjects: " + error.message);
@@ -60,16 +68,20 @@ export const getTeacherSubjects = async (req, res) => {
 
 export const addTeacherSubject = async (req, res) => {
   try {
-    const subjects = await readTxtFileAsJson(TEACHERS_SUBJECTS_FILE);
+    const teacherId = req.params.id;
+    const subjectId = req.body.subject_id;
+
+    const teacherSubjects = await readTxtFileAsJson(TEACHERS_SUBJECTS_FILE);
     const newSubject = {
-      recordId: subjects.length
-        ? parseInt(subjects[subjects.length - 1].recordId) + 1
+      recordId: teacherSubjects.length
+        ? parseInt(teacherSubjects[teacherSubjects.length - 1].recordId) + 1
         : 1,
-      teacherId: parseInt(req.params.id),
-      subject_id: parseInt(req.body.subject_id),
+      teacherId: await Link.generateLinkForId(TEACHERS_FILE, teacherId),
+      subject_id: await Link.generateLinkForId(SUBJECTS_FILE, subjectId),
     };
-    subjects.push(newSubject);
-    await saveJsonToTxtFile(TEACHERS_SUBJECTS_FILE, subjects);
+
+    teacherSubjects.push(newSubject);
+    await saveJsonToTxtFile(TEACHERS_SUBJECTS_FILE, teacherSubjects);
     res.status(HTTP_STATUS.CREATED).send("Subject added successfully");
   } catch (error) {
     res
@@ -80,16 +92,21 @@ export const addTeacherSubject = async (req, res) => {
 
 export const updateTeacherSubject = async (req, res) => {
   try {
-    const subjects = await readTxtFileAsJson(TEACHERS_SUBJECTS_FILE);
     const recordId = req.params.subjectRecordId;
-    const index = subjects.findIndex((s) => s.recordId === recordId);
+    const teacherSubjects = await readTxtFileAsJson(TEACHERS_SUBJECTS_FILE);
 
-    if (index === -1)
+    const index = teacherSubjects.findIndex((s) => s.recordId === recordId);
+    if (index === -1) {
       return res.status(HTTP_STATUS.NOT_FOUND).send("Subject not found");
+    }
 
-    subjects[index] = { ...subjects[index], ...req.body };
-    await saveJsonToTxtFile(TEACHERS_SUBJECTS_FILE, subjects);
-    res.send("Subject updated successfully");
+    teacherSubjects[index] = {
+      ...teacherSubjects[index],
+      ...req.body,
+    };
+
+    await saveJsonToTxtFile(TEACHERS_SUBJECTS_FILE, teacherSubjects);
+    res.status(HTTP_STATUS.OK).send("Subject updated successfully");
   } catch (error) {
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
@@ -99,31 +116,53 @@ export const updateTeacherSubject = async (req, res) => {
 
 export const deleteTeacherSubject = async (req, res) => {
   try {
-    const subjects = await readTxtFileAsJson(TEACHERS_SUBJECTS_FILE);
     const recordId = req.params.subjectRecordId;
-    const filteredSubjects = subjects.filter((s) => s.recordId !== recordId);
+    const teacherSubjects = await readTxtFileAsJson(TEACHERS_SUBJECTS_FILE);
 
-    if (filteredSubjects.length === subjects.length)
+    const filteredSubjects = teacherSubjects.filter(
+      (s) => s.recordId !== recordId
+    );
+    if (filteredSubjects.length === teacherSubjects.length) {
       return res.status(HTTP_STATUS.NOT_FOUND).send("Subject not found");
+    }
 
     await saveJsonToTxtFile(TEACHERS_SUBJECTS_FILE, filteredSubjects);
-    res.send("Subject deleted successfully");
+    res.status(HTTP_STATUS.OK).send("Subject deleted successfully");
   } catch (error) {
-    console.log(error);
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error deleting subject: " + error.message);
   }
 };
-
 export const getTeacherSchedule = async (req, res) => {
   try {
     const schedule = await readTxtFileAsJson(TEACHERS_SCHEDULE_FILE);
-    const teacherSchedule = schedule.filter(
-      (entry) => entry.teacherId === req.params.id
+    const teacherSchedule = await Promise.all(
+      schedule.map(async (entry) => {
+        const resolvedTeacher = await new Link(entry.teacherId).resolveRow();
+        if (resolvedTeacher.id === req.params.id) {
+          const resolvedSubject = await new Link(entry.subjectId).resolveRow();
+          return {
+            ...entry,
+            teacher_name: `${resolvedTeacher.firstName} ${resolvedTeacher.lastName}`,
+            subject_name: resolvedSubject?.subject_name || "Unknown",
+          };
+        }
+        return null;
+      })
     );
-    res.send(teacherSchedule);
+
+    const filteredSchedule = teacherSchedule.filter(Boolean);
+
+    if (filteredSchedule.length === 0) {
+      return res
+        .status(HTTP_STATUS.NOT_FOUND)
+        .send("No schedule found for the specified teacher.");
+    }
+
+    res.status(HTTP_STATUS.OK).send(filteredSchedule);
   } catch (error) {
+    console.error("Error retrieving schedule:", error.message);
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error retrieving schedule: " + error.message);
@@ -132,16 +171,22 @@ export const getTeacherSchedule = async (req, res) => {
 
 export const addTeacherSchedule = async (req, res) => {
   try {
+    const teacherId = req.params.id;
     const schedule = await readTxtFileAsJson(TEACHERS_SCHEDULE_FILE);
+
     const newSchedule = {
       recordId: schedule.length
         ? parseInt(schedule[schedule.length - 1].recordId) + 1
         : 1,
-      teacherId: parseInt(req.params.id),
+      teacherId: await Link.generateLinkForId(TEACHERS_FILE, teacherId),
       day: req.body.day,
       time: req.body.time,
-      subjectId: parseInt(req.body.subjectId),
+      subjectId: await Link.generateLinkForId(
+        SUBJECTS_FILE,
+        req.body.subjectId
+      ),
     };
+
     schedule.push(newSchedule);
     await saveJsonToTxtFile(TEACHERS_SCHEDULE_FILE, schedule);
     res.status(HTTP_STATUS.CREATED).send("Schedule added successfully");
@@ -154,16 +199,21 @@ export const addTeacherSchedule = async (req, res) => {
 
 export const updateTeacherSchedule = async (req, res) => {
   try {
-    const schedule = await readTxtFileAsJson(TEACHERS_SCHEDULE_FILE);
     const recordId = req.params.scheduleRecordId;
+    const schedule = await readTxtFileAsJson(TEACHERS_SCHEDULE_FILE);
+
     const index = schedule.findIndex((s) => s.recordId === recordId);
-
-    if (index === -1)
+    if (index === -1) {
       return res.status(HTTP_STATUS.NOT_FOUND).send("Schedule not found");
+    }
 
-    schedule[index] = { ...schedule[index], ...req.body };
+    schedule[index] = {
+      ...schedule[index],
+      ...req.body,
+    };
+
     await saveJsonToTxtFile(TEACHERS_SCHEDULE_FILE, schedule);
-    res.send("Schedule updated successfully");
+    res.status(HTTP_STATUS.OK).send("Schedule updated successfully");
   } catch (error) {
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
@@ -173,15 +223,16 @@ export const updateTeacherSchedule = async (req, res) => {
 
 export const deleteTeacherSchedule = async (req, res) => {
   try {
-    const schedule = await readTxtFileAsJson(TEACHERS_SCHEDULE_FILE);
     const recordId = req.params.scheduleRecordId;
-    const filteredSchedule = schedule.filter((s) => s.recordId != recordId);
+    const schedule = await readTxtFileAsJson(TEACHERS_SCHEDULE_FILE);
 
-    if (filteredSchedule.length === schedule.length)
+    const filteredSchedule = schedule.filter((s) => s.recordId !== recordId);
+    if (filteredSchedule.length === schedule.length) {
       return res.status(HTTP_STATUS.NOT_FOUND).send("Schedule not found");
+    }
 
     await saveJsonToTxtFile(TEACHERS_SCHEDULE_FILE, filteredSchedule);
-    res.send("Schedule deleted successfully");
+    res.status(HTTP_STATUS.OK).send("Schedule deleted successfully");
   } catch (error) {
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
@@ -192,12 +243,19 @@ export const deleteTeacherSchedule = async (req, res) => {
 export const addTeacher = async (req, res) => {
   try {
     const teachers = await readTxtFileAsJson(TEACHERS_FILE);
+
     const newTeacher = {
-      id: teachers.length ? parseInt(teachers[teachers.length - 1].id) + 1 : 1,
+      rowNumber: teachers.length ? parseInt(teachers.length) + 1 : 1,
+      id:
+        teachers.length > 0
+          ? Math.max(...teachers.map((teacher) => parseInt(teacher.id))) + 1
+          : 1,
       ...req.body,
     };
+
     teachers.push(newTeacher);
     await saveJsonToTxtFile(TEACHERS_FILE, teachers);
+
     res.status(HTTP_STATUS.CREATED).send("Teacher added successfully");
   } catch (error) {
     res
@@ -208,16 +266,21 @@ export const addTeacher = async (req, res) => {
 
 export const updateTeacher = async (req, res) => {
   try {
+    const teacherId = req.params.id;
     const teachers = await readTxtFileAsJson(TEACHERS_FILE);
-    const id = req.params.id;
-    const index = teachers.findIndex((t) => t.id === id);
 
-    if (index === -1)
+    const index = teachers.findIndex((t) => t.id === teacherId);
+    if (index === -1) {
       return res.status(HTTP_STATUS.NOT_FOUND).send("Teacher not found");
+    }
 
-    teachers[index] = { ...teachers[index], ...req.body };
+    teachers[index] = {
+      ...teachers[index],
+      ...req.body,
+    };
+
     await saveJsonToTxtFile(TEACHERS_FILE, teachers);
-    res.send("Teacher updated successfully");
+    res.status(HTTP_STATUS.OK).send("Teacher updated successfully");
   } catch (error) {
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
@@ -227,15 +290,16 @@ export const updateTeacher = async (req, res) => {
 
 export const deleteTeacher = async (req, res) => {
   try {
+    const teacherId = req.params.id;
     const teachers = await readTxtFileAsJson(TEACHERS_FILE);
-    const id = req.params.id;
-    const filteredTeachers = teachers.filter((t) => t.id !== id);
 
-    if (filteredTeachers.length === teachers.length)
+    const filteredTeachers = teachers.filter((t) => t.id !== teacherId);
+    if (filteredTeachers.length === teachers.length) {
       return res.status(HTTP_STATUS.NOT_FOUND).send("Teacher not found");
+    }
 
     await saveJsonToTxtFile(TEACHERS_FILE, filteredTeachers);
-    res.send("Teacher deleted successfully");
+    res.status(HTTP_STATUS.OK).send("Teacher deleted successfully");
   } catch (error) {
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
