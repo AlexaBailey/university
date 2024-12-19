@@ -10,6 +10,10 @@ import AssessmentDetails from "./pages/AssessmentDetails";
 import StudentGrades from "./pages/StudentGrades";
 import SubjectsPage from "./pages/SubjectsPage";
 import AdminPage from "./pages/AdminPage";
+import Books from "./pages/Books";
+import Employees from "./pages/Employees";
+import Visitors from "./pages/Visitors";
+import BorrowedBooks from "./pages/BorrowedBooks";
 
 function App() {
   return (
@@ -27,7 +31,11 @@ function App() {
           <Route path="/groups/:id" element={<GroupDetail />} />
           <Route path="/subjects" element={<SubjectsPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/books" element={<Books />} />
+          <Route path="/borrowed-books" element={<BorrowedBooks />} />
 
+          <Route path="/employees" element={<Employees />} />
+          <Route path="/visitors" element={<Visitors />} />
           <Route
             path="/assessments/:groupLessonId"
             element={<AssessmentDetails />}

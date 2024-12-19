@@ -35,6 +35,34 @@ const Students = () => {
       group: "",
     });
   };
+  const handleDownloadById = (id) => {
+    apiClient
+      .get(`/students/${id}`)
+      .then((response) => {
+        const { firstName, lastName } = response.data;
+        const fileName = `${firstName}_${lastName}.txt`;
+
+        return apiClient
+          .get(`/students/${id}/download`, { responseType: "blob" })
+          .then((downloadResponse) => {
+            const url = window.URL.createObjectURL(
+              new Blob([downloadResponse.data])
+            );
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", fileName);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+          });
+      })
+      .catch((error) => {
+        console.error(
+          `Error downloading student record with ID ${id}:`,
+          error.message
+        );
+      });
+  };
 
   const handleSaveStudent = () => {
     if (studentData.id) {
@@ -111,6 +139,12 @@ const Students = () => {
                   onClick={() => handleDeleteStudent(student.id)}
                 >
                   Delete
+                </button>
+                <button
+                  className="px-2 py-1 bg-blue-500 text-white rounded"
+                  onClick={() => handleDownloadById(student.id)}
+                >
+                  Download
                 </button>
               </td>
             </tr>

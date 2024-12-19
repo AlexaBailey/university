@@ -358,3 +358,42 @@ export const deleteStudent = async (req, res) => {
       .send("Error deleting student: " + error.message);
   }
 };
+
+export const downloadStudentRecordById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const students = await readDecryptedFile(STUDENTS_FILE);
+    const studentGroups = await readDecryptedFile(STUDENTS_GROUPS_FILE);
+    // const groups = await readDecryptedFile(GROUPS_FILE);
+
+    const student = students.find((s) => s.id === id);
+    if (!student) {
+      return res.status(404).send("Student not found.");
+    }
+
+    const studentGroupEntry = studentGroups.find(async (sg) => {
+      const resolvedStudent = await new Link(sg.studentId).resolveRow();
+      return resolvedStudent.id === id;
+    });
+
+    const group =
+      studentGroupEntry &&
+      studentGroupEntry.groupId &&
+      (await new Link(studentGroupEntry.groupId).resolveRow());
+
+    const fileContent = `ID: ${student.id}\nName: ${student.firstName} ${
+      student.lastName
+    }\nAge: ${student.age}\nGroup: ${group ? group.groupName : "N/A"}`;
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=student_${id}.txt`
+    );
+    res.setHeader("Content-Type", "text/plain");
+    res.send(fileContent);
+  } catch (error) {
+    console.error("Error generating student record:", error.message);
+    res.status(500).send("Error generating student record.");
+  }
+};

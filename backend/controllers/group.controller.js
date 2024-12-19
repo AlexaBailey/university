@@ -243,7 +243,7 @@ export const addGroupLesson = async (req, res) => {
     const groupLessons = await readDecryptedFile(GROUPS_LESSONS_FILE);
 
     const newLesson = {
-      rowNumber: groupLessons.length ? +groupLessons.length + 1 : 1, // Length of the array + 1
+      rowNumber: groupLessons.length ? +groupLessons.length + 1 : 1,
       id: groupLessons.length
         ? Math.max(...groupLessons.map((lesson) => parseInt(lesson.id))) + 1
         : 1,

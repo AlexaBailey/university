@@ -38,6 +38,27 @@ const Layout = ({ children }) => {
               Admin
             </Link>
           </li>
+
+          <li>
+            <Link to="/books" className="hover:text-yellow-primary">
+              Books
+            </Link>
+          </li>
+          <li>
+            <Link to="/employees" className="hover:text-yellow-primary">
+              Employees
+            </Link>
+          </li>
+          <li>
+            <Link to="/visitors" className="hover:text-yellow-primary">
+              Visitors
+            </Link>
+          </li>
+          <li>
+            <Link to="/borrowed-books" className="hover:text-yellow-primary">
+              Borrowed Books
+            </Link>
+          </li>
         </ul>
       </nav>
       <main className="flex-1 p-8">{children}</main>
