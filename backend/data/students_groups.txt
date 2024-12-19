@@ -4,3 +4,4 @@ recordId,studentId,groupId
 4,${students/3/id},${groups/1/id}
 6,${students/4/id},${groups/1/id}
 7,${students/5/id},${groups/2/id}
+8,${students/6/id},${groups/1/id}

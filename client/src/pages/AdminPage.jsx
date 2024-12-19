@@ -9,6 +9,7 @@ const AdminPage = () => {
     teachers: [],
     groups: [],
     exams: [],
+    subjects: [],
   });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,6 +30,9 @@ const AdminPage = () => {
     apiClient
       .get("/exams")
       .then((res) => setData((prev) => ({ ...prev, exams: res.data })));
+    apiClient
+      .get("/subjects")
+      .then((res) => setData((prev) => ({ ...prev, subjects: res.data })));
   };
 
   useEffect(() => {
@@ -58,14 +62,15 @@ const AdminPage = () => {
             label: "Group",
             type: "select",
             options: data.groups.map((g) => ({
-              value: g.groupId,
+              value: g.id,
               label: g.groupName,
             })),
           },
         ]);
-        setSubmitHandler((formData) =>
-          apiClient.post("/students", formData).then(() => fetchData())
-        );
+        setSubmitHandler(() => async (formData) => {
+          await apiClient.post("/students", formData);
+          fetchData();
+        });
         break;
 
       case "Teachers":
@@ -83,10 +88,12 @@ const AdminPage = () => {
             type: "text",
             required: true,
           },
+          { name: "age", label: "Age", type: "number", required: true },
         ]);
-        setSubmitHandler((formData) =>
-          apiClient.post("/teachers", formData).then(() => fetchData())
-        );
+        setSubmitHandler(() => async (formData) => {
+          await apiClient.post("/teachers", formData);
+          fetchData();
+        });
         break;
 
       case "Groups":
@@ -99,9 +106,10 @@ const AdminPage = () => {
             required: true,
           },
         ]);
-        setSubmitHandler((formData) =>
-          apiClient.post("/groups", formData).then(() => fetchData())
-        );
+        setSubmitHandler(() => async (formData) => {
+          await apiClient.post("/groups", formData);
+          fetchData();
+        });
         break;
 
       case "Exams":
@@ -112,16 +120,35 @@ const AdminPage = () => {
             label: "Group",
             type: "select",
             options: data.groups.map((g) => ({
-              value: g.groupId,
+              value: g.id,
               label: g.groupName,
+            })),
+          },
+          {
+            name: "teacherId",
+            label: "Teacher",
+            type: "select",
+            options: data.teachers.map((t) => ({
+              value: t.id,
+              label: `${t.firstName} ${t.lastName}`,
+            })),
+          },
+          {
+            name: "subjectId",
+            label: "Subject",
+            type: "select",
+            options: data.subjects.map((s) => ({
+              value: s.id,
+              label: s.subject_name,
             })),
           },
           { name: "date", label: "Date", type: "date", required: true },
           { name: "time", label: "Time", type: "time", required: true },
         ]);
-        setSubmitHandler((formData) =>
-          apiClient.post("/exams", formData).then(() => fetchData())
-        );
+        setSubmitHandler(() => async (formData) => {
+          await apiClient.post("/exams", formData);
+          fetchData();
+        });
         break;
 
       default:
@@ -148,7 +175,7 @@ const AdminPage = () => {
                   <td className="border px-4 py-2">{`${student.firstName} ${student.lastName}`}</td>
                   <td className="border px-4 py-2">{student.age}</td>
                   <td className="border px-4 py-2">
-                    {student.group?.groupName || "N/A"}
+                    {student.group?.name || "N/A"}
                   </td>
                 </tr>
               ))}
@@ -184,7 +211,7 @@ const AdminPage = () => {
             </thead>
             <tbody>
               {data.groups.map((group) => (
-                <tr key={group.groupId}>
+                <tr key={group.id}>
                   <td className="border px-4 py-2">{group.groupName}</td>
                 </tr>
               ))}
@@ -198,14 +225,18 @@ const AdminPage = () => {
             <thead>
               <tr className="bg-yellow-500">
                 <th className="border px-4 py-2">Group</th>
+                <th className="border px-4 py-2">Teacher</th>
+                <th className="border px-4 py-2">Subject</th>
                 <th className="border px-4 py-2">Date</th>
                 <th className="border px-4 py-2">Time</th>
               </tr>
             </thead>
             <tbody>
               {data.exams.map((exam) => (
-                <tr key={exam.examId}>
-                  <td className="border px-4 py-2">{exam.group?.groupName}</td>
+                <tr key={exam.id}>
+                  <td className="border px-4 py-2">{exam.group?.name}</td>
+                  <td className="border px-4 py-2">{exam.teacher?.name} </td>
+                  <td className="border px-4 py-2">{exam.subject?.name}</td>
                   <td className="border px-4 py-2">{exam.date}</td>
                   <td className="border px-4 py-2">{exam.time}</td>
                 </tr>

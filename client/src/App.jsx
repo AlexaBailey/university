@@ -9,6 +9,7 @@ import GroupDetail from "./pages/GroupDetail";
 import AssessmentDetails from "./pages/AssessmentDetails";
 import StudentGrades from "./pages/StudentGrades";
 import SubjectsPage from "./pages/SubjectsPage";
+import AdminPage from "./pages/AdminPage";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
 
           <Route path="/groups/:id" element={<GroupDetail />} />
           <Route path="/subjects" element={<SubjectsPage />} />
+          <Route path="/admin" element={<AdminPage />} />
 
           <Route
             path="/assessments/:groupLessonId"

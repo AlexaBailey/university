@@ -33,6 +33,11 @@ const Layout = ({ children }) => {
               Subjects
             </Link>
           </li>
+          <li>
+            <Link to="/admin" className="hover:text-yellow-primary">
+              Admin
+            </Link>
+          </li>
         </ul>
       </nav>
       <main className="flex-1 p-8">{children}</main>

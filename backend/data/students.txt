@@ -4,3 +4,4 @@ rowNumber,id,firstName,lastName,age
 3,4,Nastya,Kot,21
 4,6,Nikita,Sokolovskiy,22
 5,7,Kirill,Bondarenko,24
+6,8,Alexa,Serko,21
