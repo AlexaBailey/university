@@ -1,0 +1,6 @@
+recordId,teacherId,day,time,subjectId
+1,${teachers/1/id},Monday,08:30-09:50,${subjects/2/id}
+2,${teachers/1/id},Monday,10:10-11:40,${subjects/3/id}
+3,${teachers/1/id},Tuesday,13:30-14:50,${subjects/2/id}
+4,${teachers/2/id},Wednesday,16:20-17:50,${subjects/4/id}
+5,${teachers/3/id},Friday,08:30-09:50,${subjects/1/id}

@@ -4,8 +4,11 @@ import {
   GROUPS_LESSONS_FILE,
   STUDENTS_FILE,
   STUDENTS_GROUPS_FILE,
+  SUBJECTS_FILE,
+  TEACHERS_FILE,
 } from "../constants/filenames.js";
-import { readTxtFileAsJson, saveJsonToTxtFile } from "../utils/fileHandlers.js";
+import { readDecryptedFile } from "../utils/fileHandlers.js";
+import { saveAndEncryptData } from "../utils/crypt.js";
 import { gradingScale } from "../utils/gradingScale.js";
 import { HTTP_STATUS } from "../constants/http.js";
 import Link from "../Link/Link.class.js";
@@ -18,9 +21,9 @@ export const assessGroup = async (req, res) => {
       return res.status(HTTP_STATUS.BAD_REQUEST).send("recordId is required.");
     }
 
-    const groupLessons = await readTxtFileAsJson(GROUPS_LESSONS_FILE);
-    const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
-    const assessments = await readTxtFileAsJson(ASSESSMENTS_FILE);
+    const groupLessons = await readDecryptedFile(GROUPS_LESSONS_FILE);
+    const studentGroups = await readDecryptedFile(STUDENTS_GROUPS_FILE);
+    const assessments = await readDecryptedFile(ASSESSMENTS_FILE);
     const groupLesson = await Link.findById(GROUPS_LESSONS_FILE, recordId);
 
     if (!groupLesson) {
@@ -78,7 +81,7 @@ export const assessGroup = async (req, res) => {
 
     const updatedAssessments = [...assessments, ...newAssessments];
 
-    await saveJsonToTxtFile(ASSESSMENTS_FILE, updatedAssessments);
+    await saveAndEncryptData(ASSESSMENTS_FILE, updatedAssessments);
 
     res.status(HTTP_STATUS.OK).send({
       message: "Group successfully assessed.",
@@ -101,7 +104,7 @@ export const getAssessmentDetails = async (req, res) => {
         .send("groupLessonId is required.");
     }
 
-    const assessments = await readTxtFileAsJson(ASSESSMENTS_FILE);
+    const assessments = await readDecryptedFile(ASSESSMENTS_FILE);
 
     const relevantAssessments = assessments.filter(
       (a) => parseInt(a.groupLessonId) === parseInt(groupLessonId)
@@ -147,8 +150,8 @@ export const getGroupLessons = async (req, res) => {
   try {
     const { groupId, teacherId, date } = req.query;
 
-    const groupLessons = await readTxtFileAsJson(GROUPS_LESSONS_FILE);
-    const assessments = await readTxtFileAsJson(ASSESSMENTS_FILE);
+    const groupLessons = await readDecryptedFile(GROUPS_LESSONS_FILE);
+    const assessments = await readDecryptedFile(ASSESSMENTS_FILE);
 
     const filteredLessons = await Promise.all(
       groupLessons.map(async (lesson) => {
@@ -227,9 +230,9 @@ export const addGroupLesson = async (req, res) => {
         .status(HTTP_STATUS.BAD_REQUEST)
         .send("All fields are required.");
     }
-    const resolvedGroup = await new Link(groupId).resolveRow();
-    const resolvedTeacher = await new Link(teacherId).resolveRow();
-    const resolvedSubject = await new Link(subjectId).resolveRow();
+    const resolvedGroup = await Link.findById(GROUPS_FILE, groupId);
+    const resolvedTeacher = await Link.findById(TEACHERS_FILE, teacherId);
+    const resolvedSubject = await Link.findById(SUBJECTS_FILE, subjectId);
 
     if (!resolvedGroup || !resolvedTeacher || !resolvedSubject) {
       return res
@@ -237,11 +240,12 @@ export const addGroupLesson = async (req, res) => {
         .send("Invalid group, teacher, or subject ID provided.");
     }
 
-    const groupLessons = await readTxtFileAsJson(GROUPS_LESSONS_FILE);
+    const groupLessons = await readDecryptedFile(GROUPS_LESSONS_FILE);
 
     const newLesson = {
-      groupLessonId: groupLessons.length
-        ? parseInt(groupLessons[groupLessons.length - 1].groupLessonId) + 1
+      rowNumber: groupLessons.length ? +groupLessons.length + 1 : 1, // Length of the array + 1
+      id: groupLessons.length
+        ? Math.max(...groupLessons.map((lesson) => parseInt(lesson.id))) + 1
         : 1,
       groupId: await Link.generateLinkForId(GROUPS_FILE, resolvedGroup.id),
       teacherId: await Link.generateLinkForId(
@@ -257,7 +261,7 @@ export const addGroupLesson = async (req, res) => {
     };
 
     groupLessons.push(newLesson);
-    await saveJsonToTxtFile(GROUPS_LESSONS_FILE, groupLessons);
+    await saveAndEncryptData(GROUPS_LESSONS_FILE, groupLessons);
 
     res.status(HTTP_STATUS.CREATED).send({
       message: "Group lesson added successfully.",
@@ -281,7 +285,7 @@ export const addGroup = async (req, res) => {
         .send("Group name is required.");
     }
 
-    const groups = await readTxtFileAsJson(GROUPS_FILE);
+    const groups = await readDecryptedFile(GROUPS_FILE);
 
     const newGroup = {
       rowNumber: groups.length ? parseInt(groups[groups.length - 1].id) + 1 : 1,
@@ -293,8 +297,7 @@ export const addGroup = async (req, res) => {
     };
 
     groups.push(newGroup);
-    await saveJsonToTxtFile(GROUPS_FILE, groups);
-    console.log(newGroup);
+    await saveAndEncryptData(GROUPS_FILE, groups);
 
     const groupLink = await Link.generateLinkForId(GROUPS_FILE, newGroup.id);
 
@@ -314,7 +317,7 @@ export const addGroup = async (req, res) => {
 };
 export const getAllGroups = async (req, res) => {
   try {
-    const groups = await readTxtFileAsJson(GROUPS_FILE);
+    const groups = await readDecryptedFile(GROUPS_FILE);
     const enrichedGroups = await Promise.all(
       groups.map(async (group) => ({
         ...group,
@@ -334,7 +337,6 @@ export const getAllGroups = async (req, res) => {
 export const getGroupById = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log(req.params.id);
     const resolvedGroup = await Link.findById(GROUPS_FILE, id);
 
     if (!resolvedGroup) {
@@ -359,7 +361,7 @@ export const updateGroup = async (req, res) => {
     const { id } = req.params;
     const { groupName } = req.body;
 
-    const groups = await readTxtFileAsJson(GROUPS_FILE);
+    const groups = await readDecryptedFile(GROUPS_FILE);
     const resolvedGroup = await Link.findById(GROUPS_FILE, id);
 
     if (!resolvedGroup) {
@@ -367,7 +369,7 @@ export const updateGroup = async (req, res) => {
     }
     resolvedGroup.groupName = groupName || resolvedGroup.groupName;
 
-    await saveJsonToTxtFile(GROUPS_FILE, groups);
+    await saveAndEncryptData(GROUPS_FILE, groups);
 
     res.status(HTTP_STATUS.OK).send({
       message: "Group updated successfully.",
@@ -385,8 +387,8 @@ export const deleteGroup = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const groups = await readTxtFileAsJson(GROUPS_FILE);
-    const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
+    const groups = await readDecryptedFile(GROUPS_FILE);
+    const studentGroups = await readDecryptedFile(STUDENTS_GROUPS_FILE);
 
     const resolvedGroup = await Link.findById(GROUPS_FILE, id);
     if (!resolvedGroup) {
@@ -406,8 +408,8 @@ export const deleteGroup = async (req, res) => {
       })
     );
 
-    await saveJsonToTxtFile(STUDENTS_GROUPS_FILE, filteredStudentGroups);
-    await saveJsonToTxtFile(GROUPS_FILE, filteredGroups);
+    await saveAndEncryptData(STUDENTS_GROUPS_FILE, filteredStudentGroups);
+    await saveAndEncryptData(GROUPS_FILE, filteredGroups);
 
     res.status(HTTP_STATUS.OK).send({
       message: `Group and associated student links deleted successfully.`,
@@ -430,7 +432,7 @@ export const getStudentsByGroup = async (req, res) => {
         .send("Group ID is required and must be a number.");
     }
 
-    const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
+    const studentGroups = await readDecryptedFile(STUDENTS_GROUPS_FILE);
     const filteredStudentGroups = (
       await Promise.all(
         studentGroups.map(async (entry) => {

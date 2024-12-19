@@ -1,4 +1,5 @@
-import { readTxtFileAsJson, saveJsonToTxtFile } from "../utils/fileHandlers.js";
+import { readDecryptedFile } from "../utils/fileHandlers.js";
+import { saveAndEncryptData } from "../utils/crypt.js";
 import {
   EXAMS_INFO_FILE,
   EXAM_RESULTS_FILE,
@@ -14,7 +15,7 @@ import Link from "../Link/Link.class.js";
 export const getAllExams = async (req, res) => {
   try {
     const { groupId, teacherId, date } = req.query;
-    const examsInfo = await readTxtFileAsJson(EXAMS_INFO_FILE);
+    const examsInfo = await readDecryptedFile(EXAMS_INFO_FILE);
     const filteredExams = await Promise.all(
       examsInfo.map(async (exam) => {
         const resolvedGroup = await new Link(exam.groupId).resolveRow();
@@ -73,7 +74,7 @@ export const getAllExams = async (req, res) => {
 export const getExamById = async (req, res) => {
   try {
     const { id } = req.params;
-    const exams = await readTxtFileAsJson(EXAMS_INFO_FILE);
+    const exams = await readDecryptedFile(EXAMS_INFO_FILE);
     const exam = exams.find((e) => parseInt(e.id) === parseInt(id));
 
     if (!exam) return res.status(HTTP_STATUS.NOT_FOUND).send("Exam not found.");
@@ -116,7 +117,7 @@ export const addExam = async (req, res) => {
         .send("All fields are required.");
     }
 
-    const exams = await readTxtFileAsJson(EXAMS_INFO_FILE);
+    const exams = await readDecryptedFile(EXAMS_INFO_FILE);
     const newExam = {
       rowNumber: exams.length ? parseInt(exams[exams.length - 1].id) + 1 : 1,
       id: exams.length ? parseInt(exams[exams.length - 1].id) + 1 : 1,
@@ -128,15 +129,12 @@ export const addExam = async (req, res) => {
     };
 
     exams.push(newExam);
-    await saveJsonToTxtFile(EXAMS_INFO_FILE, exams);
+    await saveAndEncryptData(EXAMS_INFO_FILE, exams);
 
     const resolvedGroup = await new Link(groupId).resolveRow();
-    console.log(resolvedGroup);
     const resolvedTeacher = await new Link(teacherId).resolveRow();
-    console.log(resolvedTeacher);
 
     const resolvedSubject = await new Link(subjectId).resolveRow();
-    console.log(resolvedSubject);
 
     const enrichedExam = {
       ...newExam,
@@ -168,7 +166,7 @@ export const updateExam = async (req, res) => {
     const { id } = req.params;
     const { groupId, teacherId, subjectId, date, time } = req.body;
 
-    const exams = await readTxtFileAsJson(EXAMS_INFO_FILE);
+    const exams = await readDecryptedFile(EXAMS_INFO_FILE);
     const index = exams.findIndex((e) => parseInt(e.id) === parseInt(id));
 
     if (index === -1)
@@ -192,7 +190,7 @@ export const updateExam = async (req, res) => {
       time: time || exams[index].time,
     };
 
-    await saveJsonToTxtFile(EXAMS_INFO_FILE, exams);
+    await saveAndEncryptData(EXAMS_INFO_FILE, exams);
 
     const resolvedGroup = await new Link(exams[index].groupId).resolveRow();
     const resolvedTeacher = await new Link(exams[index].teacherId).resolveRow();
@@ -227,14 +225,14 @@ export const deleteExam = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const exams = await readTxtFileAsJson(EXAMS_INFO_FILE);
+    const exams = await readDecryptedFile(EXAMS_INFO_FILE);
     const filteredExams = exams.filter((e) => parseInt(e.id) !== parseInt(id));
 
     if (exams.length === filteredExams.length) {
       return res.status(HTTP_STATUS.NOT_FOUND).send("Exam not found.");
     }
 
-    await saveJsonToTxtFile(EXAMS_INFO_FILE, filteredExams);
+    await saveAndEncryptData(EXAMS_INFO_FILE, filteredExams);
     res.status(HTTP_STATUS.OK).send("Exam deleted successfully.");
   } catch (error) {
     res
@@ -246,8 +244,8 @@ export const getAllExamResults = async (req, res) => {
   try {
     const { groupId } = req.query;
 
-    const examResults = await readTxtFileAsJson(EXAM_RESULTS_FILE);
-    const examsInfo = await readTxtFileAsJson(EXAMS_INFO_FILE);
+    const examResults = await readDecryptedFile(EXAM_RESULTS_FILE);
+    const examsInfo = await readDecryptedFile(EXAMS_INFO_FILE);
 
     const enrichedResults = await Promise.all(
       examResults.map(async (result) => {
@@ -314,9 +312,9 @@ export const addExamResult = async (req, res) => {
       return res.status(HTTP_STATUS.BAD_REQUEST).send("examId is required.");
     }
 
-    const examsInfo = await readTxtFileAsJson(EXAMS_INFO_FILE);
-    const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
-    const examResults = await readTxtFileAsJson(EXAM_RESULTS_FILE);
+    const examsInfo = await readDecryptedFile(EXAMS_INFO_FILE);
+    const studentGroups = await readDecryptedFile(STUDENTS_GROUPS_FILE);
+    const examResults = await readDecryptedFile(EXAM_RESULTS_FILE);
 
     const exam = examsInfo.find((e) => parseInt(e.id) === parseInt(examId));
 
@@ -371,7 +369,7 @@ export const addExamResult = async (req, res) => {
     );
 
     const updatedResults = [...examResults, ...newResults];
-    await saveJsonToTxtFile(EXAM_RESULTS_FILE, updatedResults);
+    await saveAndEncryptData(EXAM_RESULTS_FILE, updatedResults);
 
     res.status(HTTP_STATUS.CREATED).send({
       message: "Exam results added successfully.",

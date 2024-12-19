@@ -462,7 +462,7 @@ const TeacherDetail = () => {
             .filter((lesson) => !lesson.assessed)
             .map((lesson) => (
               <option key={lesson.id} value={lesson.id}>
-                {`Group: ${lesson.resolvedGroup.groupName} - Date: ${lesson.date} - Subject: ${lesson?.resolvedSubject.subject_name}`}
+                {`Group: ${lesson.id}- ${lesson.resolvedGroup.groupName} - Date: ${lesson.date} - Subject: ${lesson?.resolvedSubject.subject_name}`}
               </option>
             ))}
         </select>
@@ -533,14 +533,14 @@ const TeacherDetail = () => {
 
         <select
           value={lessonData.subjectId}
-          onChange={(e) =>
-            setLessonData({ ...lessonData, subjectId: e.target.value })
-          }
+          onChange={(e) => {
+            setLessonData({ ...lessonData, subjectId: e.target.value });
+          }}
           className="border px-2 py-1 mb-2 w-full"
         >
           <option value="">Select Subject</option>
           {subjects.map((subject) => (
-            <option key={subject.subject_id} value={subject.subject_id}>
+            <option key={subject.id} value={subject.subject_id}>
               {subject.subject_name}
             </option>
           ))}

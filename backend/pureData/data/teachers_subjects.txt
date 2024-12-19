@@ -1,0 +1,5 @@
+recordId,teacherId,subject_id
+1,${teachers/1/id},${subjects/2/id}
+2,${teachers/1/id},${subjects/3/id}
+3,${teachers/2/id},${subjects/4/id}
+4,${teachers/3/id},${subjects/1/id}

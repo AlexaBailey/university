@@ -1,4 +1,6 @@
 import fs from "fs/promises";
+import { decryptFileAndValidate } from "./crypt.js";
+import { decryptStoredKey } from "./key_encryption.js";
 
 export const convertJsonToTxt = async (jsonFilename, txtFilename) => {
   try {
@@ -28,35 +30,36 @@ export const convertJsonToTxt = async (jsonFilename, txtFilename) => {
     console.error(`Error converting ${jsonFilename} to ${txtFilename}:`, error);
   }
 };
-
-export const readTxtFileAsJson = async (filename) => {
+export const readTxtFileAsJson = async (data) => {
   try {
-    const data = await fs.readFile(`./data/${filename}`, "utf-8");
     const lines = data.trim().split("\n");
     const headers = lines[0]
       .split(",")
-      .map((key) => key.trim().replace(/\r/g, ""));
+      .map((header) => header.trim().replace(/\r$/, ""));
 
     return lines.slice(1).map((line) => {
       const values = line
         .split(",")
-        .map((value) => value.trim().replace(/\r/g, ""));
+        .map((value) => value.trim().replace(/\r$/, ""));
       const obj = {};
 
       headers.forEach((key, index) => {
         obj[key] =
           key === "schedule" && values[index]?.includes("|")
-            ? values[index].split("|").map((v) => v.trim().replace(/\r/g, ""))
+            ? values[index]
+                .split("|")
+                .map((val) => val.trim().replace(/\r$/, ""))
             : values[index];
       });
 
       return obj;
     });
   } catch (error) {
-    console.error(`Error reading ${filename}:`, error);
+    console.error("Error reading text file as JSON:", error);
     return [];
   }
 };
+
 export const saveJsonToTxtFile = async (filename, data) => {
   try {
     const keys = Object.keys(data[0]).map((key) =>
@@ -100,3 +103,10 @@ export const saveArrayDataToTxtFile = async (filename, data, formatRow) => {
     throw new Error(`Could not save array data to file: ${filename}`);
   }
 };
+
+export async function readDecryptedFile(file) {
+  const decryptedKey = await decryptStoredKey("./data/encrypted_key.json");
+  const decryptedData = await decryptFileAndValidate(file, decryptedKey);
+  const data = await readTxtFileAsJson(decryptedData);
+  return data;
+}

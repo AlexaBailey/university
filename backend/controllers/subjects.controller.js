@@ -2,13 +2,14 @@ import {
   SUBJECTS_FILE,
   TEACHERS_SUBJECTS_FILE,
 } from "../constants/filenames.js";
-import { readTxtFileAsJson, saveJsonToTxtFile } from "../utils/fileHandlers.js";
+import { readDecryptedFile } from "../utils/fileHandlers.js";
+import { saveAndEncryptData } from "../utils/crypt.js";
 import { HTTP_STATUS } from "../constants/http.js";
 import Link from "../Link/Link.class.js";
 
 export const getAllSubjects = async (req, res) => {
   try {
-    const subjects = await readTxtFileAsJson(SUBJECTS_FILE);
+    const subjects = await readDecryptedFile(SUBJECTS_FILE);
 
     if (!subjects || subjects.length === 0) {
       return res.status(HTTP_STATUS.NOT_FOUND).send("No subjects found.");
@@ -33,7 +34,7 @@ export const updateSubject = async (req, res) => {
         .send("Subject name is required.");
     }
 
-    const subjects = await readTxtFileAsJson(SUBJECTS_FILE);
+    const subjects = await readDecryptedFile(SUBJECTS_FILE);
     const resolvedSubject = await Link.findById(SUBJECTS_FILE, id);
     if (!resolvedSubject) {
       return res
@@ -54,7 +55,7 @@ export const updateSubject = async (req, res) => {
 
     subjects[index] = { ...subjects[index], subject_name };
 
-    await saveJsonToTxtFile(SUBJECTS_FILE, subjects);
+    await saveAndEncryptData(SUBJECTS_FILE, subjects);
     res.status(HTTP_STATUS.OK).send({
       message: "Subject updated successfully.",
       updated: subjects[index],
@@ -69,8 +70,8 @@ export const deleteSubject = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const subjects = await readTxtFileAsJson(SUBJECTS_FILE);
-    const teacherSubjects = await readTxtFileAsJson(TEACHERS_SUBJECTS_FILE);
+    const subjects = await readDecryptedFile(SUBJECTS_FILE);
+    const teacherSubjects = await readDecryptedFile(TEACHERS_SUBJECTS_FILE);
     const resolvedSubject = await Link.findById(SUBJECTS_FILE, id);
     if (!resolvedSubject) {
       return res
@@ -91,8 +92,8 @@ export const deleteSubject = async (req, res) => {
       })
     );
 
-    await saveJsonToTxtFile(SUBJECTS_FILE, filteredSubjects);
-    await saveJsonToTxtFile(
+    await saveAndEncryptData(SUBJECTS_FILE, filteredSubjects);
+    await saveAndEncryptData(
       TEACHERS_SUBJECTS_FILE,
       filteredTeacherSubjects.filter(Boolean)
     );
@@ -117,7 +118,7 @@ export const addSubject = async (req, res) => {
         .send("Subject name is required.");
     }
 
-    const subjects = await readTxtFileAsJson(SUBJECTS_FILE);
+    const subjects = await readDecryptedFile(SUBJECTS_FILE);
 
     const newSubject = {
       rowNumber: subjects.length ? parseInt(subjects.length) + 1 : 1,
@@ -130,7 +131,7 @@ export const addSubject = async (req, res) => {
 
     subjects.push(newSubject);
 
-    await saveJsonToTxtFile(SUBJECTS_FILE, subjects);
+    await saveAndEncryptData(SUBJECTS_FILE, subjects);
 
     res.status(HTTP_STATUS.CREATED).send({
       message: "Subject added successfully.",

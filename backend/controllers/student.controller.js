@@ -8,18 +8,19 @@ import {
   STUDENTS_GROUPS_FILE,
   SUBJECTS_FILE,
 } from "../constants/filenames.js";
-import { readTxtFileAsJson, saveJsonToTxtFile } from "../utils/fileHandlers.js";
+import { readDecryptedFile } from "../utils/fileHandlers.js";
+import { saveAndEncryptData } from "../utils/crypt.js";
 import { HTTP_STATUS } from "../constants/http.js";
 import Link from "../Link/Link.class.js";
 export const getStudentGrades = async (req, res) => {
   try {
     const studentId = req.params.id;
 
-    const subjects = await readTxtFileAsJson(SUBJECTS_FILE);
-    const groupLessons = await readTxtFileAsJson(GROUPS_LESSONS_FILE);
-    const assessments = await readTxtFileAsJson(ASSESSMENTS_FILE);
-    const examsInfo = await readTxtFileAsJson(EXAMS_INFO_FILE);
-    const examsResults = await readTxtFileAsJson(EXAM_RESULTS_FILE);
+    const subjects = await readDecryptedFile(SUBJECTS_FILE);
+    const groupLessons = await readDecryptedFile(GROUPS_LESSONS_FILE);
+    const assessments = await readDecryptedFile(ASSESSMENTS_FILE);
+    const examsInfo = await readDecryptedFile(EXAMS_INFO_FILE);
+    const examsResults = await readDecryptedFile(EXAM_RESULTS_FILE);
 
     const studentAssessments = (
       await Promise.all(
@@ -104,7 +105,7 @@ export const getStudentGrades = async (req, res) => {
 
 export const addStudentGrade = async (req, res) => {
   try {
-    const grades = await readTxtFileAsJson(STUDENTS_GRADES_FILE);
+    const grades = await readDecryptedFile(STUDENTS_GRADES_FILE);
     const newGrade = {
       recordId: grades.length
         ? parseInt(grades[grades.length - 1].recordId) + 1
@@ -113,7 +114,7 @@ export const addStudentGrade = async (req, res) => {
       ...req.body,
     };
     grades.push(newGrade);
-    await saveJsonToTxtFile(STUDENTS_GRADES_FILE, grades);
+    await saveAndEncryptData(STUDENTS_GRADES_FILE, grades);
     res.status(HTTP_STATUS.CREATED).send("Grade added successfully");
   } catch (error) {
     res
@@ -123,8 +124,8 @@ export const addStudentGrade = async (req, res) => {
 };
 export const getAllStudents = async (req, res) => {
   try {
-    const students = await readTxtFileAsJson(STUDENTS_FILE);
-    const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
+    const students = await readDecryptedFile(STUDENTS_FILE);
+    const studentGroups = await readDecryptedFile(STUDENTS_GROUPS_FILE);
 
     const studentsWithGroups = await Promise.all(
       students.map(async (student) => {
@@ -194,7 +195,7 @@ export const getStudentById = async (req, res) => {
       return res.status(HTTP_STATUS.NOT_FOUND).send("Student not found");
     }
 
-    const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
+    const studentGroups = await readDecryptedFile(STUDENTS_GROUPS_FILE);
     const studentGroup = studentGroups.find(
       (entry) => parseInt(entry.studentId) === parseInt(resolvedStudent.id)
     );
@@ -217,8 +218,8 @@ export const getStudentById = async (req, res) => {
 
 export const addStudent = async (req, res) => {
   try {
-    const students = await readTxtFileAsJson(STUDENTS_FILE);
-    const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
+    const students = await readDecryptedFile(STUDENTS_FILE);
+    const studentGroups = await readDecryptedFile(STUDENTS_GROUPS_FILE);
     const validStudents = students.filter(
       (student) => !isNaN(parseInt(student.id))
     );
@@ -233,7 +234,7 @@ export const addStudent = async (req, res) => {
     let { id, groupId, ...rest } = req.body;
     const newStudent = { rowNumber, id: newId, ...rest };
     students.push(newStudent);
-    await saveJsonToTxtFile(STUDENTS_FILE, students);
+    await saveAndEncryptData(STUDENTS_FILE, students);
 
     if (groupId) {
       const groupLink = await Link.generateLinkForId(GROUPS_FILE, groupId);
@@ -246,7 +247,7 @@ export const addStudent = async (req, res) => {
       });
     }
 
-    await saveJsonToTxtFile(STUDENTS_GROUPS_FILE, studentGroups);
+    await saveAndEncryptData(STUDENTS_GROUPS_FILE, studentGroups);
 
     res.status(HTTP_STATUS.CREATED).send({
       message: "Student added successfully",
@@ -261,8 +262,8 @@ export const addStudent = async (req, res) => {
 };
 export const updateStudent = async (req, res) => {
   try {
-    const students = await readTxtFileAsJson(STUDENTS_FILE);
-    const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
+    const students = await readDecryptedFile(STUDENTS_FILE);
+    const studentGroups = await readDecryptedFile(STUDENTS_GROUPS_FILE);
 
     const id = req.params.id;
     const resolvedStudent = await Link.findById(STUDENTS_FILE, id);
@@ -272,7 +273,7 @@ export const updateStudent = async (req, res) => {
     }
     let { group, groupId, ...rest } = req.body;
     students[index] = { ...students[index], ...rest };
-    await saveJsonToTxtFile(STUDENTS_FILE, students);
+    await saveAndEncryptData(STUDENTS_FILE, students);
     if (groupId) {
       const groupLink = await Link.generateLinkForId(GROUPS_FILE, groupId);
       const groupIndex = (
@@ -300,7 +301,7 @@ export const updateStudent = async (req, res) => {
       }
     }
 
-    await saveJsonToTxtFile(STUDENTS_GROUPS_FILE, studentGroups);
+    await saveAndEncryptData(STUDENTS_GROUPS_FILE, studentGroups);
 
     res.send({
       message: "Student updated successfully",
@@ -316,8 +317,8 @@ export const updateStudent = async (req, res) => {
 
 export const deleteStudent = async (req, res) => {
   try {
-    const students = await readTxtFileAsJson(STUDENTS_FILE);
-    const studentGroups = await readTxtFileAsJson(STUDENTS_GROUPS_FILE);
+    const students = await readDecryptedFile(STUDENTS_FILE);
+    const studentGroups = await readDecryptedFile(STUDENTS_GROUPS_FILE);
 
     const id = req.params.id;
 
@@ -346,8 +347,8 @@ export const deleteStudent = async (req, res) => {
         return originalEntry;
       });
 
-    await saveJsonToTxtFile(STUDENTS_FILE, filteredStudents);
-    await saveJsonToTxtFile(STUDENTS_GROUPS_FILE, filteredStudentGroups);
+    await saveAndEncryptData(STUDENTS_FILE, filteredStudents);
+    await saveAndEncryptData(STUDENTS_GROUPS_FILE, filteredStudentGroups);
 
     res.send("Student deleted successfully");
   } catch (error) {

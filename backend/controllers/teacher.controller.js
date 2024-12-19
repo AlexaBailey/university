@@ -4,13 +4,14 @@ import {
   TEACHERS_SUBJECTS_FILE,
   SUBJECTS_FILE,
 } from "../constants/filenames.js";
-import { readTxtFileAsJson, saveJsonToTxtFile } from "../utils/fileHandlers.js";
+import { readDecryptedFile } from "../utils/fileHandlers.js";
+import { saveAndEncryptData } from "../utils/crypt.js";
 import { HTTP_STATUS } from "../constants/http.js";
 import Link from "../Link/Link.class.js";
 
 export const getAllTeachers = async (req, res) => {
   try {
-    const teachers = await readTxtFileAsJson(TEACHERS_FILE);
+    const teachers = await readDecryptedFile(TEACHERS_FILE);
     res.status(HTTP_STATUS.OK).send(teachers);
   } catch (error) {
     res
@@ -35,7 +36,7 @@ export const getTeacherById = async (req, res) => {
 export const getTeacherSubjects = async (req, res) => {
   try {
     const teacherId = req.params.id;
-    const teacherSubjects = await readTxtFileAsJson(TEACHERS_SUBJECTS_FILE);
+    const teacherSubjects = await readDecryptedFile(TEACHERS_SUBJECTS_FILE);
     const result = await Promise.all(
       teacherSubjects.map(async (ts) => {
         const resolvedTeacher = await new Link(ts.teacherId).resolveRow();
@@ -45,6 +46,7 @@ export const getTeacherSubjects = async (req, res) => {
         return {
           ...ts,
           teacher_name: `${resolvedTeacher.firstName} ${resolvedTeacher.lastName}`,
+          subject_id: resolvedSubject?.id,
           subject_name: resolvedSubject?.subject_name || "Unknown",
         };
       })
@@ -71,7 +73,7 @@ export const addTeacherSubject = async (req, res) => {
     const teacherId = req.params.id;
     const subjectId = req.body.subject_id;
 
-    const teacherSubjects = await readTxtFileAsJson(TEACHERS_SUBJECTS_FILE);
+    const teacherSubjects = await readDecryptedFile(TEACHERS_SUBJECTS_FILE);
     const newSubject = {
       recordId: teacherSubjects.length
         ? parseInt(teacherSubjects[teacherSubjects.length - 1].recordId) + 1
@@ -81,7 +83,7 @@ export const addTeacherSubject = async (req, res) => {
     };
 
     teacherSubjects.push(newSubject);
-    await saveJsonToTxtFile(TEACHERS_SUBJECTS_FILE, teacherSubjects);
+    await saveAndEncryptData(TEACHERS_SUBJECTS_FILE, teacherSubjects);
     res.status(HTTP_STATUS.CREATED).send("Subject added successfully");
   } catch (error) {
     res
@@ -93,7 +95,7 @@ export const addTeacherSubject = async (req, res) => {
 export const updateTeacherSubject = async (req, res) => {
   try {
     const recordId = req.params.subjectRecordId;
-    const teacherSubjects = await readTxtFileAsJson(TEACHERS_SUBJECTS_FILE);
+    const teacherSubjects = await readDecryptedFile(TEACHERS_SUBJECTS_FILE);
 
     const index = teacherSubjects.findIndex((s) => s.recordId === recordId);
     if (index === -1) {
@@ -105,7 +107,7 @@ export const updateTeacherSubject = async (req, res) => {
       ...req.body,
     };
 
-    await saveJsonToTxtFile(TEACHERS_SUBJECTS_FILE, teacherSubjects);
+    await saveAndEncryptData(TEACHERS_SUBJECTS_FILE, teacherSubjects);
     res.status(HTTP_STATUS.OK).send("Subject updated successfully");
   } catch (error) {
     res
@@ -117,7 +119,7 @@ export const updateTeacherSubject = async (req, res) => {
 export const deleteTeacherSubject = async (req, res) => {
   try {
     const recordId = req.params.subjectRecordId;
-    const teacherSubjects = await readTxtFileAsJson(TEACHERS_SUBJECTS_FILE);
+    const teacherSubjects = await readDecryptedFile(TEACHERS_SUBJECTS_FILE);
 
     const filteredSubjects = teacherSubjects.filter(
       (s) => s.recordId !== recordId
@@ -126,7 +128,7 @@ export const deleteTeacherSubject = async (req, res) => {
       return res.status(HTTP_STATUS.NOT_FOUND).send("Subject not found");
     }
 
-    await saveJsonToTxtFile(TEACHERS_SUBJECTS_FILE, filteredSubjects);
+    await saveAndEncryptData(TEACHERS_SUBJECTS_FILE, filteredSubjects);
     res.status(HTTP_STATUS.OK).send("Subject deleted successfully");
   } catch (error) {
     res
@@ -136,7 +138,7 @@ export const deleteTeacherSubject = async (req, res) => {
 };
 export const getTeacherSchedule = async (req, res) => {
   try {
-    const schedule = await readTxtFileAsJson(TEACHERS_SCHEDULE_FILE);
+    const schedule = await readDecryptedFile(TEACHERS_SCHEDULE_FILE);
     const teacherSchedule = await Promise.all(
       schedule.map(async (entry) => {
         const resolvedTeacher = await new Link(entry.teacherId).resolveRow();
@@ -172,7 +174,7 @@ export const getTeacherSchedule = async (req, res) => {
 export const addTeacherSchedule = async (req, res) => {
   try {
     const teacherId = req.params.id;
-    const schedule = await readTxtFileAsJson(TEACHERS_SCHEDULE_FILE);
+    const schedule = await readDecryptedFile(TEACHERS_SCHEDULE_FILE);
 
     const newSchedule = {
       recordId: schedule.length
@@ -188,7 +190,7 @@ export const addTeacherSchedule = async (req, res) => {
     };
 
     schedule.push(newSchedule);
-    await saveJsonToTxtFile(TEACHERS_SCHEDULE_FILE, schedule);
+    await saveAndEncryptData(TEACHERS_SCHEDULE_FILE, schedule);
     res.status(HTTP_STATUS.CREATED).send("Schedule added successfully");
   } catch (error) {
     res
@@ -200,7 +202,7 @@ export const addTeacherSchedule = async (req, res) => {
 export const updateTeacherSchedule = async (req, res) => {
   try {
     const recordId = req.params.scheduleRecordId;
-    const schedule = await readTxtFileAsJson(TEACHERS_SCHEDULE_FILE);
+    const schedule = await readDecryptedFile(TEACHERS_SCHEDULE_FILE);
 
     const index = schedule.findIndex((s) => s.recordId === recordId);
     if (index === -1) {
@@ -212,7 +214,7 @@ export const updateTeacherSchedule = async (req, res) => {
       ...req.body,
     };
 
-    await saveJsonToTxtFile(TEACHERS_SCHEDULE_FILE, schedule);
+    await saveAndEncryptData(TEACHERS_SCHEDULE_FILE, schedule);
     res.status(HTTP_STATUS.OK).send("Schedule updated successfully");
   } catch (error) {
     res
@@ -224,14 +226,14 @@ export const updateTeacherSchedule = async (req, res) => {
 export const deleteTeacherSchedule = async (req, res) => {
   try {
     const recordId = req.params.scheduleRecordId;
-    const schedule = await readTxtFileAsJson(TEACHERS_SCHEDULE_FILE);
+    const schedule = await readDecryptedFile(TEACHERS_SCHEDULE_FILE);
 
     const filteredSchedule = schedule.filter((s) => s.recordId !== recordId);
     if (filteredSchedule.length === schedule.length) {
       return res.status(HTTP_STATUS.NOT_FOUND).send("Schedule not found");
     }
 
-    await saveJsonToTxtFile(TEACHERS_SCHEDULE_FILE, filteredSchedule);
+    await saveAndEncryptData(TEACHERS_SCHEDULE_FILE, filteredSchedule);
     res.status(HTTP_STATUS.OK).send("Schedule deleted successfully");
   } catch (error) {
     res
@@ -242,7 +244,7 @@ export const deleteTeacherSchedule = async (req, res) => {
 
 export const addTeacher = async (req, res) => {
   try {
-    const teachers = await readTxtFileAsJson(TEACHERS_FILE);
+    const teachers = await readDecryptedFile(TEACHERS_FILE);
 
     const newTeacher = {
       rowNumber: teachers.length ? parseInt(teachers.length) + 1 : 1,
@@ -254,7 +256,7 @@ export const addTeacher = async (req, res) => {
     };
 
     teachers.push(newTeacher);
-    await saveJsonToTxtFile(TEACHERS_FILE, teachers);
+    await saveAndEncryptData(TEACHERS_FILE, teachers);
 
     res.status(HTTP_STATUS.CREATED).send("Teacher added successfully");
   } catch (error) {
@@ -267,7 +269,7 @@ export const addTeacher = async (req, res) => {
 export const updateTeacher = async (req, res) => {
   try {
     const teacherId = req.params.id;
-    const teachers = await readTxtFileAsJson(TEACHERS_FILE);
+    const teachers = await readDecryptedFile(TEACHERS_FILE);
 
     const index = teachers.findIndex((t) => t.id === teacherId);
     if (index === -1) {
@@ -279,7 +281,9 @@ export const updateTeacher = async (req, res) => {
       ...req.body,
     };
 
-    await saveJsonToTxtFile(TEACHERS_FILE, teachers);
+    console.log(teachers);
+
+    await saveAndEncryptData(TEACHERS_FILE, teachers);
     res.status(HTTP_STATUS.OK).send("Teacher updated successfully");
   } catch (error) {
     res
@@ -291,14 +295,14 @@ export const updateTeacher = async (req, res) => {
 export const deleteTeacher = async (req, res) => {
   try {
     const teacherId = req.params.id;
-    const teachers = await readTxtFileAsJson(TEACHERS_FILE);
+    const teachers = await readDecryptedFile(TEACHERS_FILE);
 
     const filteredTeachers = teachers.filter((t) => t.id !== teacherId);
     if (filteredTeachers.length === teachers.length) {
       return res.status(HTTP_STATUS.NOT_FOUND).send("Teacher not found");
     }
 
-    await saveJsonToTxtFile(TEACHERS_FILE, filteredTeachers);
+    await saveAndEncryptData(TEACHERS_FILE, filteredTeachers);
     res.status(HTTP_STATUS.OK).send("Teacher deleted successfully");
   } catch (error) {
     res
