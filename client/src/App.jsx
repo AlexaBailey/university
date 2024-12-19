@@ -14,6 +14,7 @@ import Books from "./pages/Books";
 import Employees from "./pages/Employees";
 import Visitors from "./pages/Visitors";
 import BorrowedBooks from "./pages/BorrowedBooks";
+import ExamResults from "./pages/ExamResults";
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/books" element={<Books />} />
           <Route path="/borrowed-books" element={<BorrowedBooks />} />
+          <Route path="/exam-results" element={<ExamResults />} />
 
           <Route path="/employees" element={<Employees />} />
           <Route path="/visitors" element={<Visitors />} />

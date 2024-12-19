@@ -125,7 +125,7 @@ const GroupDetail = () => {
                   key={lesson.id}
                 >
                   <td className="border px-4 py-2">{lesson.id}</td>
-                  <td className="border px-4 py-2">{lesson.subject_name}</td>
+                  <td className="border px-4 py-2">{lesson.subject.name}</td>
                   <td className="border px-4 py-2">{lesson.date}</td>
                   <td className="border px-4 py-2">{lesson.time}</td>
                 </tr>

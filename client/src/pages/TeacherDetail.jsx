@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import apiClient from "../api/apiClient";
 import Modal from "../components/Modal";
 import { TiTick } from "react-icons/ti";
@@ -58,7 +58,12 @@ const TeacherDetail = () => {
     groupId: "",
     subjectId: "",
   });
+  const navigate = useNavigate();
   const [allGroups, setAllGroups] = useState([]);
+  const handleAssessExam = (id) => {
+    apiClient.post(`/exams/results`, { examId: id });
+    alert("Exam Assessed!");
+  };
 
   const fetchTeacherData = () => {
     apiClient.get(`/teachers/${teacherId}`).then((res) => setTeacher(res.data));
@@ -137,14 +142,6 @@ const TeacherDetail = () => {
     });
   };
 
-  const handleAddExam = () => {
-    apiClient.post(`/exams`, { ...examData, teacherId }).then(() => {
-      fetchExams();
-      fetchTeacherData();
-      resetAddExamModal();
-    });
-  };
-
   const resetAssessModal = () => {
     setIsAssessModalOpen(false);
     setSelectedLesson("");
@@ -183,12 +180,14 @@ const TeacherDetail = () => {
     resetSubjectModal();
   };
   const handleSaveExam = () => {
-    if (examData.examId) {
+    if (examData.id) {
       apiClient
-        .put(`/exams/${examData.examId}`, examData)
+        .put(`/exams/${examData.id}`, { ...examData, teacherId })
         .then(fetchTeacherData);
     } else {
-      apiClient.post(`/exams`, examData).then(fetchTeacherData);
+      apiClient
+        .post(`/exams`, { ...examData, teacherId })
+        .then(fetchTeacherData);
     }
     resetExamModal();
   };
@@ -474,22 +473,6 @@ const TeacherDetail = () => {
       <div className="mt-6 flex justify-between ">
         <div className="mb-4 flex space-x-4">
           <div>
-            <label className="block font-semibold">Filter by Group</label>
-            <select
-              name="groupId"
-              value={filters.groupId}
-              onChange={handleFilterChange}
-              className="border px-2 py-1 w-full"
-            >
-              <option value="">All Groups</option>
-              {allGroups.map((group) => (
-                <option key={group.groupId} value={group.groupId}>
-                  {group.groupName}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
             <label className="block font-semibold">Filter by Date</label>
             <input
               type="date"
@@ -499,14 +482,6 @@ const TeacherDetail = () => {
               className="border px-2 py-1 w-full"
             />
           </div>
-        </div>
-        <div>
-          <button
-            className="px-4 py-2 bg-black-primary text-yellow-500  rounded"
-            onClick={() => setIsAddExamModalOpen(true)}
-          >
-            Add Exam
-          </button>
         </div>
       </div>
 
@@ -565,59 +540,14 @@ const TeacherDetail = () => {
         />
       </Modal>
 
-      <Modal
-        isOpen={isAddExamModalOpen}
-        closeModal={resetAddExamModal}
-        title="Add Exam"
-        onSubmit={handleAddExam}
-      >
-        <select
-          value={examData.groupId}
-          onChange={(e) =>
-            setExamData({ ...examData, groupId: e.target.value })
-          }
-          className="border px-2 py-1 mb-2 w-full"
-        >
-          <option value="">Select Group</option>
-          {allGroups.map((group) => (
-            <option key={group.groupId} value={group.groupId}>
-              {group.groupName}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={examData.subjectId}
-          onChange={(e) =>
-            setExamData({ ...examData, subjectId: e.target.value })
-          }
-          className="border px-2 py-1 mb-2 w-full"
-        >
-          <option value="">Select Subject</option>
-          {subjects.map((subject) => (
-            <option key={subject.subject_id} value={subject.subject_id}>
-              {subject.subject_name}
-            </option>
-          ))}
-        </select>
-
-        <input
-          type="date"
-          value={examData.date}
-          onChange={(e) => setExamData({ ...examData, date: e.target.value })}
-          className="border px-2 py-1 mb-2 w-full"
-        />
-
-        <input
-          type="time"
-          value={examData.time}
-          onChange={(e) => setExamData({ ...examData, time: e.target.value })}
-          className="border px-2 py-1 mb-2 w-full"
-        />
-      </Modal>
-
       <div>
         <h2 className="text-2xl font-semibold mb-4">Exams</h2>
+        <button
+          className="px-2 py-1 bg-yellow-500 rounded flex justify-end mb-4"
+          onClick={() => navigate(`/exam-results`)}
+        >
+          View Results
+        </button>
         <table className="table-auto w-full border border-gray-300">
           <thead>
             <tr className="bg-yellow-500 text-black">
@@ -631,27 +561,20 @@ const TeacherDetail = () => {
           <tbody>
             {exams.length > 0 ? (
               exams.map((exam) => (
-                <tr key={exam.examId}>
+                <tr
+                  className="cursor-pointer hover:bg-yellow-100"
+                  onDoubleClick={() => handleAssessExam(exam.id)}
+                  key={exam.id}
+                >
                   <td className="border px-4 py-2">{exam.group.name}</td>
                   <td className="border px-4 py-2">{exam.subject.name}</td>
                   <td className="border px-4 py-2">{exam.date}</td>
                   <td className="border px-4 py-2">{exam.time}</td>
                   <td className="border px-4 py-2 space-x-2">
                     <button
-                      className="px-2 py-1 bg-yellow-600 text-white rounded"
-                      onClick={() => {
-                        setExamData(exam);
-                        setIsExamModalOpen(true);
-                      }}
-                    >
-                      Edit
-                    </button>
-                    <button
                       className="px-2 py-1 bg-red-500 text-white rounded"
                       onClick={() =>
-                        apiClient
-                          .delete(`/exams/${exam.examId}`)
-                          .then(fetchExams)
+                        apiClient.delete(`/exams/${exam.id}`).then(fetchExams)
                       }
                     >
                       Delete
@@ -703,45 +626,6 @@ const TeacherDetail = () => {
           }
           className="border px-2 py-1 mb-2 w-full"
         />
-      </Modal>
-
-      <Modal
-        isOpen={isExamModalOpen}
-        closeModal={resetExamModal}
-        title={examData.examId ? "Edit Exam" : "Add Exam"}
-        onSubmit={handleSaveExam}
-      >
-        <input
-          type="text"
-          placeholder="Date"
-          value={examData.date}
-          onChange={(e) => setExamData({ ...examData, date: e.target.value })}
-          className="border px-2 py-1 mb-2 w-full"
-        />
-        <input
-          type="text"
-          placeholder="Time"
-          value={examData.time}
-          onChange={(e) => setExamData({ ...examData, time: e.target.value })}
-          className="border px-2 py-1 mb-2 w-full"
-        />
-        <select
-          value={examData.subjectId}
-          onChange={(e) =>
-            setExamData({
-              ...examData,
-              subjectId: e.target.value,
-            })
-          }
-          className="border px-2 py-1 mb-2 w-full"
-        >
-          <option value="">Select subject</option>
-          {subjects.map((subject) => (
-            <option key={subject.subject_id} value={subject.subject_id}>
-              {subject.subject_name}
-            </option>
-          ))}
-        </select>
       </Modal>
 
       <Modal

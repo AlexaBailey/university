@@ -107,10 +107,10 @@ export const getExamById = async (req, res) => {
       .send("Error retrieving exam: " + error.message);
   }
 };
+
 export const addExam = async (req, res) => {
   try {
     const { groupId, teacherId, subjectId, date, time } = req.body;
-
     if (!groupId || !teacherId || !subjectId || !date || !time) {
       return res
         .status(HTTP_STATUS.BAD_REQUEST)
@@ -131,10 +131,10 @@ export const addExam = async (req, res) => {
     exams.push(newExam);
     await saveAndEncryptData(EXAMS_INFO_FILE, exams);
 
-    const resolvedGroup = await new Link(groupId).resolveRow();
-    const resolvedTeacher = await new Link(teacherId).resolveRow();
+    const resolvedGroup = await Link.findById(GROUPS_FILE, groupId);
+    const resolvedTeacher = await Link.findById(TEACHERS_FILE, teacherId);
 
-    const resolvedSubject = await new Link(subjectId).resolveRow();
+    const resolvedSubject = await Link.findById(SUBJECTS_FILE, subjectId);
 
     const enrichedExam = {
       ...newExam,
@@ -165,7 +165,6 @@ export const updateExam = async (req, res) => {
   try {
     const { id } = req.params;
     const { groupId, teacherId, subjectId, date, time } = req.body;
-
     const exams = await readDecryptedFile(EXAMS_INFO_FILE);
     const index = exams.findIndex((e) => parseInt(e.id) === parseInt(id));
 
@@ -176,15 +175,15 @@ export const updateExam = async (req, res) => {
       ...exams[index],
       groupId: await Link.generateLinkForId(
         GROUPS_FILE,
-        groupId || exams[index].groupId
+        parseInt(groupId) || parseInt(exams[index].groupId)
       ),
       teacherId: await Link.generateLinkForId(
         TEACHERS_FILE,
-        teacherId || exams[index].teacherId
+        parseInt(teacherId) || parseInt(exams[index].teacherId)
       ),
       subjectId: await Link.generateLinkForId(
         SUBJECTS_FILE,
-        subjectId || exams[index].subjectId
+        parseInt(subjectId) || parseInt(exams[index].subjectId)
       ),
       date: date || exams[index].date,
       time: time || exams[index].time,
@@ -216,11 +215,13 @@ export const updateExam = async (req, res) => {
       .status(HTTP_STATUS.OK)
       .send({ message: "Exam updated successfully", exam: enrichedExam });
   } catch (error) {
+    console.error("Error updating exam:", error.message);
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .send("Error updating exam: " + error.message);
   }
 };
+
 export const deleteExam = async (req, res) => {
   try {
     const { id } = req.params;

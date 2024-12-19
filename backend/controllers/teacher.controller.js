@@ -281,8 +281,6 @@ export const updateTeacher = async (req, res) => {
       ...req.body,
     };
 
-    console.log(teachers);
-
     await saveAndEncryptData(TEACHERS_FILE, teachers);
     res.status(HTTP_STATUS.OK).send("Teacher updated successfully");
   } catch (error) {
