@@ -269,7 +269,7 @@ const AdminPage = () => {
       </div>
 
       <button
-        className="px-4 py-2 bg-green-500 text-white rounded mb-4"
+        className="px-4 py-2 bg-black-primary text-yellow-500 rounded mb-4"
         onClick={() => openAddModal(activeTab)}
       >
         Add {activeTab}
