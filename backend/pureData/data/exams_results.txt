@@ -1,8 +1,1 @@
 recordId,examId,studentId,mark
-1,${exams_info/1/id},${students/1/id},2
-2,${exams_info/1/id},${students/2/id},4
-3,${exams_info/1/id},${students/3/id},10
-4,${exams_info/1/id},${students/4/id},5
-5,${exams_info/2/id},${students/2/id},10
-6,${exams_info/2/id},${students/3/id},3
-7,${exams_info/2/id},${students/4/id},5

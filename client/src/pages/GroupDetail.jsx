@@ -77,6 +77,12 @@ const GroupDetail = () => {
 
       <div className="mb-6 bg-white p-4 rounded shadow">
         <h2 className="text-2xl font-semibold mb-4">Exams</h2>
+        <button
+          className="px-2 py-1 bg-yellow-500 rounded flex justify-end mb-4"
+          onClick={() => navigate(`/exam-results?groupId=${group.id}`)}
+        >
+          View {group.groupName} Exam Results
+        </button>
         {exams.length > 0 ? (
           <table className="table-auto w-full border border-gray-300">
             <thead>
@@ -85,6 +91,7 @@ const GroupDetail = () => {
                 <th className="border px-4 py-2">Subject</th>
                 <th className="border px-4 py-2">Date</th>
                 <th className="border px-4 py-2">Time</th>
+                <th className="border px-4 py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -96,6 +103,16 @@ const GroupDetail = () => {
                   </td>
                   <td className="border px-4 py-2">{exam.date}</td>
                   <td className="border px-4 py-2">{exam.time}</td>
+                  <td>
+                    <button
+                      className="px-2 py-1 bg-yellow-500 rounded flex justify-end mb-4"
+                      onClick={() =>
+                        navigate(`/exam-results?examId=${exam.id}`)
+                      }
+                    >
+                      View Results
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

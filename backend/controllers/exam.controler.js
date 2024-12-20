@@ -16,6 +16,8 @@ export const getAllExams = async (req, res) => {
   try {
     const { groupId, teacherId, date } = req.query;
     const examsInfo = await readDecryptedFile(EXAMS_INFO_FILE);
+    const examResults = await readDecryptedFile(EXAM_RESULTS_FILE);
+
     const filteredExams = await Promise.all(
       examsInfo.map(async (exam) => {
         const resolvedGroup = await new Link(exam.groupId).resolveRow();
@@ -39,6 +41,12 @@ export const getAllExams = async (req, res) => {
         const resolvedGroup = await new Link(exam.groupId).resolveRow();
         const resolvedTeacher = await new Link(exam.teacherId).resolveRow();
         const resolvedSubject = await new Link(exam.subjectId).resolveRow();
+
+        let examLink = await Link.generateLinkForId(EXAMS_INFO_FILE, exam.id);
+        const isAssessed = examResults.some(
+          (result) => result.examId == examLink
+        );
+
         let { teacherId, groupId, subjectId, ...rest } = exam;
         return {
           ...rest,
@@ -54,6 +62,7 @@ export const getAllExams = async (req, res) => {
             id: resolvedSubject.id,
             name: resolvedSubject.subject_name,
           },
+          assessed: isAssessed,
         };
       })
     );
@@ -71,6 +80,7 @@ export const getAllExams = async (req, res) => {
       .send("Error retrieving exams: " + error.message);
   }
 };
+
 export const getExamById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -243,7 +253,7 @@ export const deleteExam = async (req, res) => {
 };
 export const getAllExamResults = async (req, res) => {
   try {
-    const { groupId } = req.query;
+    const { examId, groupId, studentId, teacherId } = req.query;
 
     const examResults = await readDecryptedFile(EXAM_RESULTS_FILE);
     const examsInfo = await readDecryptedFile(EXAMS_INFO_FILE);
@@ -253,6 +263,9 @@ export const getAllExamResults = async (req, res) => {
         try {
           const resolvedExam = await new Link(result.examId).resolveRow();
           if (!resolvedExam) return null;
+
+          if (examId && parseInt(resolvedExam.id) !== parseInt(examId))
+            return null;
 
           const resolvedGroup = await new Link(
             resolvedExam.groupId
@@ -264,6 +277,15 @@ export const getAllExamResults = async (req, res) => {
             resolvedExam.subjectId
           ).resolveRow();
           const resolvedStudent = await new Link(result.studentId).resolveRow();
+
+          if (studentId && parseInt(resolvedStudent.id) !== parseInt(studentId))
+            return null;
+
+          const resolvedTeacher = await new Link(
+            resolvedExam.teacherId
+          ).resolveRow();
+          if (teacherId && parseInt(resolvedTeacher.id) !== parseInt(teacherId))
+            return null;
 
           return {
             ...result,
@@ -278,6 +300,10 @@ export const getAllExamResults = async (req, res) => {
             subject: {
               id: resolvedSubject.id,
               name: resolvedSubject.subject_name,
+            },
+            teacher: {
+              id: resolvedTeacher.id,
+              name: `${resolvedTeacher.firstName} ${resolvedTeacher.lastName}`,
             },
             date: resolvedExam.date,
             time: resolvedExam.time,
@@ -294,7 +320,7 @@ export const getAllExamResults = async (req, res) => {
     if (validResults.length === 0) {
       return res
         .status(HTTP_STATUS.NOT_FOUND)
-        .send("No exam results found for the specified groupId.");
+        .send("No exam results found for the specified criteria.");
     }
 
     res.status(HTTP_STATUS.OK).send(validResults);
@@ -313,9 +339,20 @@ export const addExamResult = async (req, res) => {
       return res.status(HTTP_STATUS.BAD_REQUEST).send("examId is required.");
     }
 
+    const examResults = await readDecryptedFile(EXAM_RESULTS_FILE);
+
+    let examLink = await Link.generateLinkForId(EXAMS_INFO_FILE, examId);
+    const existingResult = examResults.find(
+      (result) => result.examId === examLink
+    );
+    if (existingResult) {
+      return res
+        .status(HTTP_STATUS.CONFLICT)
+        .send("Exam has already been assessed.");
+    }
+
     const examsInfo = await readDecryptedFile(EXAMS_INFO_FILE);
     const studentGroups = await readDecryptedFile(STUDENTS_GROUPS_FILE);
-    const examResults = await readDecryptedFile(EXAM_RESULTS_FILE);
 
     const exam = examsInfo.find((e) => parseInt(e.id) === parseInt(examId));
 

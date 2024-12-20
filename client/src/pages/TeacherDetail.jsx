@@ -61,8 +61,15 @@ const TeacherDetail = () => {
   const navigate = useNavigate();
   const [allGroups, setAllGroups] = useState([]);
   const handleAssessExam = (id) => {
-    apiClient.post(`/exams/results`, { examId: id });
-    alert("Exam Assessed!");
+    apiClient
+      .post(`/exams/results`, { examId: id })
+      .then(() => {
+        alert("Exam Assessed!");
+        fetchExams();
+      })
+      .catch((err) => {
+        alert(`${err.response?.data || err.message}`);
+      });
   };
 
   const fetchTeacherData = () => {
@@ -544,9 +551,9 @@ const TeacherDetail = () => {
         <h2 className="text-2xl font-semibold mb-4">Exams</h2>
         <button
           className="px-2 py-1 bg-yellow-500 rounded flex justify-end mb-4"
-          onClick={() => navigate(`/exam-results`)}
+          onClick={() => navigate(`/exam-results?teacherId=${teacherId}`)}
         >
-          View Results
+          View All {teacher.lastName}'s students' Results
         </button>
         <table className="table-auto w-full border border-gray-300">
           <thead>
@@ -555,6 +562,7 @@ const TeacherDetail = () => {
               <th className="border px-4 py-2">Subject</th>
               <th className="border px-4 py-2">Date</th>
               <th className="border px-4 py-2">Time</th>
+              <th className="border px-4 py-2">Assessed</th>
               <th className="border px-4 py-2">Actions</th>
             </tr>
           </thead>
@@ -570,9 +578,26 @@ const TeacherDetail = () => {
                   <td className="border px-4 py-2">{exam.subject.name}</td>
                   <td className="border px-4 py-2">{exam.date}</td>
                   <td className="border px-4 py-2">{exam.time}</td>
-                  <td className="border px-4 py-2 space-x-2">
+                  <td className="border px-4 py-2">
+                    {" "}
+                    {exam.assessed ? (
+                      <TiTick size={32} color="green" />
+                    ) : (
+                      <RxCross1 size={28} color="red" />
+                    )}
+                  </td>
+
+                  <td className="border px-4 py-2 space-x-2 flex justify-center">
                     <button
-                      className="px-2 py-1 bg-red-500 text-white rounded"
+                      className="px-2 py-1 bg-yellow-500 rounded flex justify-end mb-4"
+                      onClick={() =>
+                        navigate(`/exam-results?examId=${exam.id}`)
+                      }
+                    >
+                      View Results
+                    </button>
+                    <button
+                      className="px-2 py-1 bg-red-500 text-white rounded mb-4"
                       onClick={() =>
                         apiClient.delete(`/exams/${exam.id}`).then(fetchExams)
                       }

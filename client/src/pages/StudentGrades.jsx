@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import apiClient from "../api/apiClient";
 
 const StudentGrades = () => {
   const { id } = useParams();
   const [grades, setGrades] = useState([]);
   const [student, setStudent] = useState({});
-
+  const navigate = useNavigate();
   const [averageMark, setAverageMark] = useState(0);
   const [error, setError] = useState("");
 
@@ -38,6 +38,12 @@ const StudentGrades = () => {
               {averageMark || "N/A"}
             </span>
           </div>
+          <button
+            className="px-2 py-1 bg-yellow-500 rounded flex justify-end mb-4"
+            onClick={() => navigate(`/exam-results?studentId=${id}`)}
+          >
+            View {student.firstName} {student.lastName}'s Exam Results
+          </button>
 
           <table className="table-auto w-full border border-gray-300">
             <thead>
